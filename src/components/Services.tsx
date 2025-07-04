@@ -1,58 +1,68 @@
-import { Wifi, Car, Waves, Clock, Zap, Shirt, Coffee, Phone } from 'lucide-react';
+import { Wifi, Car, Utensils, Clock, Fan, Shirt, Baby, CookingPot, Plane, Sun } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const Services = () => {
   const services = [
     {
       icon: Wifi,
-      title: 'Free WiFi',
-      description: 'High-speed internet throughout the hotel'
+      title: 'Free Wi-Fi',
+      description: 'High-speed internet access throughout your stay'
+    },
+    {
+      icon: Utensils,
+      title: 'Free Breakfast',
+      description: 'Complimentary breakfast with local and continental options'
     },
     {
       icon: Car,
-      title: 'Parking',
-      description: 'Complimentary valet parking service'
+      title: 'Free Parking',
+      description: 'Secure on-site parking for all guests'
     },
     {
-      icon: Waves,
-      title: 'Swimming Pool',
-      description: 'Outdoor pool with city views'
-    },
-    {
-      icon: Clock,
-      title: '24/7 Room Service',
-      description: 'Round-the-clock dining service'
-    },
-    {
-      icon: Zap,
+      icon: Fan,
       title: 'Air Conditioning',
-      description: 'Climate-controlled comfort'
+      description: 'Climate-controlled rooms for your comfort'
     },
     {
       icon: Shirt,
       title: 'Laundry Service',
-      description: 'Professional cleaning and pressing'
+      description: 'Professional cleaning and pressing services'
     },
     {
-      icon: Coffee,
-      title: 'Breakfast',
-      description: 'Complimentary continental breakfast'
+      icon: Clock,
+      title: 'Room Service',
+      description: 'In-room dining and housekeeping services'
     },
     {
-      icon: Phone,
-      title: 'Concierge',
-      description: 'Personal assistance and recommendations'
+      icon: Baby,
+      title: 'Child Friendly',
+      description: 'Family rooms and child-friendly amenities available'
+    },
+    {
+      icon: CookingPot,
+      title: 'Kitchenette',
+      description: 'Select rooms equipped with kitchen facilities'
+    },
+    {
+      icon: Plane,
+      title: 'Airport Shuttle',
+      description: 'Transportation service to/from airport (on request)'
+    },
+    {
+      icon: Sun,
+      title: 'Daily Housekeeping',
+      description: 'Regular cleaning and maintenance service'
     }
   ];
 
   return (
     <div className="container mx-auto px-4">
       <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-gradient mb-4">Hotel Services</h2>
-        <p className="text-lg text-muted-foreground">Experience world-class amenities and services</p>
+        <h2 className="text-4xl font-bold text-gradient mb-4">Hotel Amenities</h2>
+        <p className="text-lg text-muted-foreground">Comfort and convenience at your service</p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {services.map((service, index) => (
           <Card 
             key={index}

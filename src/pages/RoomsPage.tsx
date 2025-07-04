@@ -4,69 +4,74 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { Bed, Wifi, Zap, Car, Users, Bath, Tv, Coffee } from 'lucide-react';
+import { Bed, Wifi, Fan, Tv, Coffee, Bath, Users, Snowflake } from 'lucide-react';
+import { useEffect } from 'react';
 
 const RoomsPage = () => {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const rooms = [
     {
-      id: 'single',
-      title: 'Single Bedroom',
-      price: 150,
-      image: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-      features: [
-        { icon: Bed, text: 'Single Bed' },
-        { icon: Wifi, text: 'Free WiFi' },
-        { icon: Zap, text: 'AC' },
-        { icon: Coffee, text: '24/7 Room Service' }
-      ],
-      available: 8,
-      description: 'Perfect for solo travelers seeking comfort and convenience. Our single bedrooms offer a peaceful retreat with modern amenities.',
-      amenities: ['City View', 'Work Desk', 'Private Bathroom', 'Daily Housekeeping']
-    },
-    {
-      id: 'double',
-      title: 'Double Bedroom',
-      price: 220,
-      image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      id: 'non-ac',
+      title: 'Non A/C Room',
+      price: 800,
+      image: 'https://images.unsplash.com/photo-1505693314120-0d443867891c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
       features: [
         { icon: Bed, text: 'Double Bed' },
         { icon: Wifi, text: 'Free WiFi' },
-        { icon: Zap, text: 'AC' },
-        { icon: Coffee, text: 'Mini Bar' }
+        { icon: Fan, text: 'Ceiling Fan' },
+        { icon: Coffee, text: 'Room Service' }
       ],
-      available: 12,
-      description: 'Spacious rooms ideal for couples or business travelers. Featuring elegant décor and premium comfort.',
-      amenities: ['Garden View', 'Seating Area', 'Premium Toiletries', 'Express Check-in']
+      available: 10,
+      description: 'Comfortable and economical rooms with natural ventilation, perfect for budget-conscious travelers.',
+      amenities: ['Double Bed', 'Clean Bathroom', 'Daily Housekeeping', 'TV']
+    },
+    {
+      id: 'ac',
+      title: 'A/C Room',
+      price: 1400,
+      image: 'https://images.unsplash.com/photo-1505692952047-1a78307da8f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      features: [
+        { icon: Bed, text: 'Double Bed' },
+        { icon: Wifi, text: 'Free WiFi' },
+        { icon: Snowflake, text: 'Air Conditioning' },
+        { icon: Tv, text: 'LCD TV' }
+      ],
+      available: 15,
+      description: 'Climate-controlled comfort with modern amenities for a pleasant stay.',
+      amenities: ['Air Conditioned', 'Work Desk', 'Private Bathroom', 'Room Service']
     },
     {
       id: 'deluxe',
       title: 'Deluxe Room',
-      price: 350,
-      image: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      price: 1600,
+      image: 'https://images.unsplash.com/photo-1505692433770-36f19f51681e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
       features: [
-        { icon: Bed, text: 'King Bed' },
-        { icon: Wifi, text: 'Premium WiFi' },
-        { icon: Bath, text: 'Jacuzzi' },
+        { icon: Bed, text: 'King Size Bed' },
+        { icon: Snowflake, text: 'Premium AC' },
+        { icon: Bath, text: 'Premium Bathroom' },
         { icon: Tv, text: 'Smart TV' }
       ],
-      available: 6,
-      description: 'Luxury accommodation with premium amenities and stunning views. Experience the pinnacle of comfort.',
-      amenities: ['Ocean View', 'Private Balcony', 'Butler Service', 'Complimentary Spa Access']
+      available: 8,
+      description: 'Spacious rooms with premium furnishings and enhanced amenities for a luxurious experience.',
+      amenities: ['King Size Bed', 'Premium Interiors', 'Mini Fridge', 'Complimentary Breakfast']
     },
     {
       id: 'suite',
-      title: 'Executive Suite',
-      price: 500,
-      image: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      title: 'Suite Room',
+      price: 1800,
+      image: 'https://images.unsplash.com/photo-1505692433770-36f19f51681e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
       features: [
         { icon: Users, text: 'Living Room' },
-        { icon: Bath, text: 'Jacuzzi' },
-        { icon: Car, text: 'Butler Service' },
-        { icon: Tv, text: 'Entertainment System' }
+        { icon: Bath, text: 'Luxury Bathroom' },
+        { icon: Snowflake, text: 'Premium AC' },
+        { icon: Coffee, text: 'Kitchenette' }
       ],
-      available: 4,
-      description: 'Ultimate luxury experience with separate living areas and exclusive services. Perfect for extended stays.',
-      amenities: ['Panoramic City View', 'Private Dining', 'Concierge Service', 'Airport Transfer']
+      available: 5,
+      description: 'Our finest accommodation featuring separate living area and premium services for an unforgettable stay.',
+      amenities: ['Separate Living Area', 'Premium Amenities', 'Complimentary Breakfast', 'Airport Pickup']
     }
   ];
 
@@ -75,10 +80,10 @@ const RoomsPage = () => {
       <div className="pt-20 pb-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h1 className="text-5xl font-bold text-gradient mb-6">Our Rooms & Suites</h1>
+            <h1 className="text-5xl font-bold text-gradient mb-6">Our Rooms</h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Discover luxury and comfort in our thoughtfully designed accommodations. 
-              Each room is crafted to provide you with an unforgettable experience.
+              Choose from our selection of comfortable rooms designed to meet your needs.
+              From budget-friendly options to luxury suites, we have the perfect accommodation for you.
             </p>
           </div>
           
@@ -106,7 +111,7 @@ const RoomsPage = () => {
                   <div className="flex justify-between items-start mb-4">
                     <CardTitle className="text-3xl text-hotel-brown font-bold">{room.title}</CardTitle>
                     <div className="text-right">
-                      <div className="text-3xl font-bold text-hotel-gold">${room.price}</div>
+                      <div className="text-3xl font-bold text-hotel-gold">₹{room.price}</div>
                       <div className="text-sm text-muted-foreground">per night</div>
                     </div>
                   </div>
@@ -127,7 +132,7 @@ const RoomsPage = () => {
                   </div>
                   
                   <div className="mb-6">
-                    <h4 className="font-semibold text-hotel-brown mb-3">Premium Amenities</h4>
+                    <h4 className="font-semibold text-hotel-brown mb-3">Room Amenities</h4>
                     <div className="flex flex-wrap gap-2">
                       {room.amenities.map((amenity, index) => (
                         <Badge key={index} variant="outline" className="border-hotel-gold/30 text-hotel-brown">
@@ -142,7 +147,7 @@ const RoomsPage = () => {
                       <Button 
                         className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 text-lg transition-all duration-300 hover:shadow-lg"
                       >
-                        View Details & Book
+                        Book Now
                       </Button>
                     </Link>
                   </div>

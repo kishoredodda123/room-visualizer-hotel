@@ -1,51 +1,41 @@
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 const Gallery = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [filter, setFilter] = useState('all');
 
   const images = [
     {
       id: 1,
       url: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'rooms',
       title: 'Luxury Suite'
     },
     {
       id: 2,
       url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'rooms',
       title: 'Executive Room'
     },
     {
       id: 3,
       url: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'facilities',
       title: 'Lobby Area'
     },
     {
       id: 4,
       url: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'rooms',
       title: 'Business Center'
     },
     {
       id: 5,
       url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'exterior',
       title: 'Hotel Exterior'
     },
     {
       id: 6,
       url: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      category: 'exterior',
       title: 'Garden View'
     }
   ];
-
-  const filteredImages = filter === 'all' ? images : images.filter(img => img.category === filter);
 
   return (
     <div className="container mx-auto px-4">
@@ -54,39 +44,8 @@ const Gallery = () => {
         <p className="text-lg text-muted-foreground">Discover the beauty and elegance of our hotel</p>
       </div>
       
-      <div className="flex justify-center mb-8 space-x-4">
-        <Button 
-          variant={filter === 'all' ? 'default' : 'outline'}
-          onClick={() => setFilter('all')}
-          className="px-6"
-        >
-          All
-        </Button>
-        <Button 
-          variant={filter === 'rooms' ? 'default' : 'outline'}
-          onClick={() => setFilter('rooms')}
-          className="px-6"
-        >
-          Rooms
-        </Button>
-        <Button 
-          variant={filter === 'facilities' ? 'default' : 'outline'}
-          onClick={() => setFilter('facilities')}
-          className="px-6"
-        >
-          Facilities
-        </Button>
-        <Button 
-          variant={filter === 'exterior' ? 'default' : 'outline'}
-          onClick={() => setFilter('exterior')}
-          className="px-6"
-        >
-          Exterior
-        </Button>
-      </div>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredImages.map((image) => (
+        {images.map((image) => (
           <div 
             key={image.id}
             className="group relative overflow-hidden rounded-lg cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"

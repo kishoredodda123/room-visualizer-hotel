@@ -1,3 +1,4 @@
+import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -7,7 +8,7 @@ const Footer = () => {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-hotel-gold rounded-full"></div>
-              <span className="text-xl font-bold">Grand Palace Hotel</span>
+              <span className="text-xl font-bold">MVR Residency</span>
             </div>
             <p className="text-hotel-brown-light">
               Experience luxury and comfort in the heart of the city. Your home away from home.
@@ -36,18 +37,40 @@ const Footer = () => {
           
           <div>
             <h3 className="text-lg font-semibold mb-4 text-hotel-gold">Contact Info</h3>
-            <div className="space-y-2 text-hotel-brown-light">
-              <p>123 Luxury Avenue</p>
-              <p>Downtown City, ST 12345</p>
-              <p>Phone: +1 (555) 123-4567</p>
-              <p>Email: info@grandpalacehotel.com</p>
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <MapPin className="w-5 h-5 text-hotel-gold flex-shrink-0" />
+                <div className="text-hotel-brown-light">
+                  MVR Residency<br />
+                  Ambedkar Nagar<br />
+                  Tadepalligudem, AP 534101
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Phone className="w-5 h-5 text-hotel-gold flex-shrink-0" />
+                <p className="text-hotel-brown-light">+91 8819-222-333</p>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Mail className="w-5 h-5 text-hotel-gold flex-shrink-0" />
+                <p className="text-hotel-brown-light">info@mvrresidency.com</p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Clock className="w-5 h-5 text-hotel-gold flex-shrink-0" />
+                <div className="text-hotel-brown-light">
+                  <p>24/7 Open</p>
+                  <p className="text-sm">(Check-in: 12 PM, Check-out: 11 AM)</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
-        <div className="border-t border-hotel-brown-light mt-8 pt-8 text-center">
+        <div className="border-t border-hotel-brown-light/20 mt-8 pt-8 text-center">
           <p className="text-hotel-brown-light">
-            © 2024 Grand Palace Hotel. All rights reserved. | Privacy Policy | Terms of Service
+            © 2025 MVR Residency, Ambedkar Nagar, Tadepalligudem, Andhra Pradesh 534101. All rights reserved.
           </p>
         </div>
       </div>

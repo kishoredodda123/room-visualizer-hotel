@@ -2,13 +2,21 @@
 import { Button } from '@/components/ui/button';
 
 const HeroSection = () => {
-  const scrollToBooking = () => {
-    const element = document.getElementById('availability');
-    element?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToGallery = () => {
+    const element = document.getElementById('gallery');
+    if (element) {
+      const offset = 80; // Height of the fixed navbar
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
   };
 
   return (
-    <section id="hero" className="relative h-screen flex items-center justify-center overflow-hidden">
+    <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
@@ -20,7 +28,7 @@ const HeroSection = () => {
       
       <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
-          Grand Palace Hotel
+          MVR Residency
         </h1>
         <p className="text-xl md:text-2xl mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           Experience Luxury & Comfort
@@ -28,21 +36,13 @@ const HeroSection = () => {
         <p className="text-lg md:text-xl mb-8 opacity-90 animate-fade-in" style={{ animationDelay: '0.4s' }}>
           Where elegance meets exceptional hospitality in the heart of the city
         </p>
-        <div className="space-x-4 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+        <div className="animate-fade-in" style={{ animationDelay: '0.6s' }}>
           <Button 
             size="lg" 
             className="bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold px-8 py-3"
-            onClick={scrollToBooking}
+            onClick={scrollToGallery}
           >
-            Book Your Stay
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="border-white text-white hover:bg-white hover:text-black px-8 py-3"
-            onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            Explore Gallery
+            Explore Our Hotel
           </Button>
         </div>
       </div>
