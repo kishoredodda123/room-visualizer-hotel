@@ -1,5 +1,4 @@
-
-import { Wifi, Car, Swimming, Clock, Zap, Shirt, Coffee, Phone } from 'lucide-react';
+import { Wifi, Car, Waves, Clock, Zap, Shirt, Coffee, Phone } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const Services = () => {
@@ -15,7 +14,7 @@ const Services = () => {
       description: 'Complimentary valet parking service'
     },
     {
-      icon: Swimming,
+      icon: Waves,
       title: 'Swimming Pool',
       description: 'Outdoor pool with city views'
     },
