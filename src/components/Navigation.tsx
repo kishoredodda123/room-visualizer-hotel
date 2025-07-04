@@ -1,10 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,8 +18,16 @@ const Navigation = () => {
   }, []);
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    element?.scrollIntoView({ behavior: 'smooth' });
+    if (location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    }
     setIsMobileMenuOpen(false);
   };
 
@@ -26,48 +37,48 @@ const Navigation = () => {
     }`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-br from-hotel-gold to-hotel-brown rounded-full"></div>
             <span className="text-xl font-bold text-gradient">Grand Palace Hotel</span>
-          </div>
+          </Link>
           
           <div className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => scrollToSection('hero')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
+            <Link 
+              to="/"
+              className="text-foreground hover:text-hotel-gold transition-colors font-medium"
             >
               Home
-            </button>
+            </Link>
             <button 
               onClick={() => scrollToSection('gallery')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
+              className="text-foreground hover:text-hotel-gold transition-colors font-medium"
             >
               Gallery
             </button>
             <button 
               onClick={() => scrollToSection('services')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
+              className="text-foreground hover:text-hotel-gold transition-colors font-medium"
             >
               Services
             </button>
-            <button 
-              onClick={() => scrollToSection('rooms')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
+            <Link 
+              to="/rooms"
+              className="text-foreground hover:text-hotel-gold transition-colors font-medium"
             >
               Rooms
-            </button>
-            <button 
-              onClick={() => scrollToSection('availability')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
-            >
-              Book Now
-            </button>
+            </Link>
             <button 
               onClick={() => scrollToSection('contact')}
-              className="text-foreground hover:text-hotel-gold transition-colors"
+              className="text-foreground hover:text-hotel-gold transition-colors font-medium"
             >
               Contact
             </button>
+            <Button
+              onClick={() => scrollToSection('availability')}
+              className="bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold"
+            >
+              Book Now
+            </Button>
           </div>
           
           <Button
@@ -83,39 +94,35 @@ const Navigation = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white/95 backdrop-blur-md border-t">
             <div className="px-4 py-4 space-y-2">
-              <button 
-                onClick={() => scrollToSection('hero')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
+              <Link 
+                to="/"
+                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Home
-              </button>
+              </Link>
               <button 
                 onClick={() => scrollToSection('gallery')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
+                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors font-medium"
               >
                 Gallery
               </button>
               <button 
                 onClick={() => scrollToSection('services')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
+                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors font-medium"
               >
                 Services
               </button>
-              <button 
-                onClick={() => scrollToSection('rooms')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
+              <Link 
+                to="/rooms"
+                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Rooms
-              </button>
-              <button 
-                onClick={() => scrollToSection('availability')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
-              >
-                Book Now
-              </button>
+              </Link>
               <button 
                 onClick={() => scrollToSection('contact')}
-                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors"
+                className="block w-full text-left py-2 text-foreground hover:text-hotel-gold transition-colors font-medium"
               >
                 Contact
               </button>

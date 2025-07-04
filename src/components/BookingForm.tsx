@@ -14,10 +14,17 @@ import { cn } from '@/lib/utils';
 
 interface BookingFormProps {
   selectedRooms: string[];
+  roomType?: string;
+  roomPrice?: number;
   onClose: () => void;
 }
 
-const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => {
+const BookingForm: React.FC<BookingFormProps> = ({ 
+  selectedRooms, 
+  roomType = 'Room',
+  roomPrice = 0,
+  onClose 
+}) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -48,6 +55,8 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
     console.log('Booking Details:', {
       ...formData,
       selectedRooms,
+      roomType,
+      roomPrice,
       checkIn: formData.checkIn?.toISOString(),
       checkOut: formData.checkOut?.toISOString()
     });
@@ -55,25 +64,40 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
     onClose();
   };
 
+  const getRoomNumbers = () => {
+    return selectedRooms.map(roomId => roomId.replace(/[A-Z]+/, '')).join(', ');
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-hotel-gold/20">
+        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-hotel-gold-light to-white border-b border-hotel-gold/20">
           <CardTitle className="text-2xl text-hotel-brown">Complete Your Booking</CardTitle>
-          <Button variant="ghost" onClick={onClose} className="text-2xl">
+          <Button variant="ghost" onClick={onClose} className="text-2xl hover:bg-hotel-gold/20">
             ×
           </Button>
         </CardHeader>
         
-        <CardContent>
-          <div className="mb-6 p-4 bg-hotel-gold-light rounded-lg">
-            <h3 className="font-semibold text-hotel-brown mb-2">Selected Rooms:</h3>
-            <div className="flex flex-wrap gap-2">
-              {selectedRooms.map((roomId) => (
-                <span key={roomId} className="px-3 py-1 bg-hotel-gold text-black rounded-full text-sm">
-                  Room {roomId.replace(/[A-Z]+/, '')}
-                </span>
-              ))}
+        <CardContent className="p-6">
+          <div className="mb-6 p-6 bg-gradient-to-r from-hotel-gold-light/50 to-hotel-gold-light/20 rounded-xl border border-hotel-gold/20">
+            <h3 className="font-bold text-hotel-brown mb-3 text-lg">Booking Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Room Type</p>
+                <p className="font-semibold text-hotel-brown">{roomType}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Selected Rooms</p>
+                <p className="font-semibold text-hotel-brown">Room {getRoomNumbers()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Number of Rooms</p>
+                <p className="font-semibold text-hotel-brown">{selectedRooms.length} room{selectedRooms.length > 1 ? 's' : ''}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Price per Night</p>
+                <p className="font-semibold text-hotel-gold text-lg">${roomPrice * selectedRooms.length}</p>
+              </div>
             </div>
           </div>
           
@@ -87,6 +111,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder="Enter your full name"
                   required
+                  className="mt-1"
                 />
               </div>
               
@@ -99,6 +124,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   placeholder="Enter your email"
                   required
+                  className="mt-1"
                 />
               </div>
             </div>
@@ -112,6 +138,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
                 placeholder="Enter your phone number"
                 required
+                className="mt-1"
               />
             </div>
             
@@ -123,7 +150,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal mt-1",
                         !formData.checkIn && "text-muted-foreground"
                       )}
                     >
@@ -151,7 +178,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal mt-1",
                         !formData.checkOut && "text-muted-foreground"
                       )}
                     >
@@ -181,21 +208,22 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedRooms, onClose }) => 
                 onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
                 placeholder="Any special requests or preferences..."
                 rows={3}
+                className="mt-1"
               />
             </div>
             
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 py-3"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
-                className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold"
+                className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 transition-all duration-300 hover:shadow-lg"
               >
                 Confirm Booking
               </Button>

@@ -1,8 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bed, Wifi, Zap, Car } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const RoomTypes = () => {
   const rooms = [
@@ -43,15 +43,6 @@ const RoomTypes = () => {
       description: 'Ultimate luxury experience with separate living areas and exclusive services'
     }
   ];
-
-  const scrollToAvailability = (roomType: string) => {
-    const element = document.getElementById('availability');
-    element?.scrollIntoView({ behavior: 'smooth' });
-    setTimeout(() => {
-      const roomSection = document.querySelector(`[data-room-type="${roomType}"]`);
-      roomSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 500);
-  };
 
   return (
     <div className="container mx-auto px-4">
@@ -99,18 +90,21 @@ const RoomTypes = () => {
               </div>
               
               <div className="flex space-x-3">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 border-hotel-gold text-hotel-gold hover:bg-hotel-gold hover:text-white"
-                >
-                  More Details
-                </Button>
-                <Button 
-                  className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black"
-                  onClick={() => scrollToAvailability(room.id)}
-                >
-                  Book Now
-                </Button>
+                <Link to={`/rooms/${room.id}`} className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-hotel-gold text-hotel-gold hover:bg-hotel-gold hover:text-white"
+                  >
+                    More Details
+                  </Button>
+                </Link>
+                <Link to={`/rooms/${room.id}`} className="flex-1">
+                  <Button 
+                    className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-black"
+                  >
+                    Book Now
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
