@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -271,7 +270,6 @@ const RoomDetailsPage = () => {
       
       {showBookingForm && (
         <BookingForm 
-          selectedRooms={[]}
           roomType={roomTypeData.name}
           roomPrice={roomTypeData.price}
           onClose={() => setShowBookingForm(false)}

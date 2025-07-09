@@ -8,20 +8,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BookingFormProps {
-  selectedRooms: string[];
   roomType?: string;
   roomPrice?: number;
   onClose: () => void;
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({ 
-  selectedRooms, 
   roomType = 'Room',
   roomPrice = 0,
   onClose 
@@ -34,6 +32,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     checkOut: undefined as Date | undefined,
     specialRequests: ''
   });
+  const [roomQuantity, setRoomQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,15 +47,55 @@ const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
+    if (roomQuantity < 1) {
+      toast({
+        title: "Invalid Room Quantity",
+        description: "Please select at least 1 room.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Create bookings for each selected room
-      const bookingPromises = selectedRooms.map(async (roomId) => {
+      // Get available rooms of the selected type
+      const { data: roomTypeData, error: roomTypeError } = await supabase
+        .from('room_types')
+        .select('id')
+        .eq('name', roomType)
+        .single();
+
+      if (roomTypeError) {
+        throw roomTypeError;
+      }
+
+      const { data: availableRooms, error: roomsError } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('room_type_id', roomTypeData.id)
+        .eq('status', 'available')
+        .limit(roomQuantity);
+
+      if (roomsError) {
+        throw roomsError;
+      }
+
+      if (availableRooms.length < roomQuantity) {
+        toast({
+          title: "Insufficient Rooms",
+          description: `Only ${availableRooms.length} rooms are available. Please reduce the quantity.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create bookings for the selected number of rooms
+      const bookingPromises = availableRooms.map(async (room) => {
         const { data, error } = await supabase
           .from('bookings')
           .insert({
-            room_id: roomId,
+            room_id: room.id,
             guest_name: formData.name,
             guest_email: formData.email,
             guest_phone: formData.phone,
@@ -80,15 +119,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
       toast({
         title: "Booking Confirmed! 🎉",
-        description: `Your reservation for ${selectedRooms.length} room(s) has been confirmed. A confirmation email will be sent shortly.`,
+        description: `Your reservation for ${roomQuantity} room(s) has been confirmed. A confirmation email will be sent shortly.`,
       });
       
       console.log('Booking Details:', {
         ...formData,
-        selectedRooms,
         roomType,
+        roomQuantity,
         roomPrice,
-        totalAmount: roomPrice * selectedRooms.length,
+        totalAmount: roomPrice * roomQuantity,
         checkIn: formData.checkIn?.toISOString(),
         checkOut: formData.checkOut?.toISOString()
       });
@@ -106,9 +145,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
 
-  const getRoomNumbers = () => {
-    return selectedRooms.map(roomId => roomId.replace(/[A-Z]+/, '')).join(', ');
+  const incrementQuantity = () => {
+    setRoomQuantity(prev => prev + 1);
   };
+
+  const decrementQuantity = () => {
+    setRoomQuantity(prev => Math.max(1, prev - 1));
+  };
+
+  const totalAmount = roomPrice * roomQuantity;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -129,16 +174,40 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 <p className="font-semibold text-hotel-brown">{roomType}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Number of Rooms</p>
-                <p className="font-semibold text-hotel-brown">{selectedRooms.length} room{selectedRooms.length > 1 ? 's' : ''}</p>
-              </div>
-              <div>
                 <p className="text-sm text-muted-foreground">Price per Room</p>
                 <p className="font-semibold text-hotel-gold">₹{roomPrice}</p>
               </div>
               <div>
+                <p className="text-sm text-muted-foreground">Number of Rooms</p>
+                <div className="flex items-center space-x-3 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={decrementQuantity}
+                    disabled={roomQuantity <= 1 || isSubmitting}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="font-semibold text-hotel-brown text-lg min-w-[2rem] text-center">
+                    {roomQuantity}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={incrementQuantity}
+                    disabled={isSubmitting}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="font-semibold text-hotel-gold text-lg">₹{roomPrice * selectedRooms.length}</p>
+                <p className="font-semibold text-hotel-gold text-xl">₹{totalAmount}</p>
               </div>
             </div>
           </div>
@@ -275,7 +344,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 transition-all duration-300 hover:shadow-lg"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Processing...' : 'Confirm Booking'}
+                {isSubmitting ? 'Processing...' : `Confirm Booking - ₹${totalAmount}`}
               </Button>
             </div>
           </form>
