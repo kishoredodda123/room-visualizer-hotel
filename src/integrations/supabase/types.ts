@@ -19,12 +19,14 @@ export type Database = {
           booking_status: Database["public"]["Enums"]["booking_status"]
           check_in_date: string
           check_out_date: string
+          confirmation_code: string | null
           created_at: string
           guest_email: string
           guest_name: string
           guest_phone: string
           id: string
           payment_confirmed: boolean
+          qr_data: string | null
           room_id: string
           special_requests: string | null
           total_amount: number
@@ -34,12 +36,14 @@ export type Database = {
           booking_status?: Database["public"]["Enums"]["booking_status"]
           check_in_date: string
           check_out_date: string
+          confirmation_code?: string | null
           created_at?: string
           guest_email: string
           guest_name: string
           guest_phone: string
           id?: string
           payment_confirmed?: boolean
+          qr_data?: string | null
           room_id: string
           special_requests?: string | null
           total_amount: number
@@ -49,12 +53,14 @@ export type Database = {
           booking_status?: Database["public"]["Enums"]["booking_status"]
           check_in_date?: string
           check_out_date?: string
+          confirmation_code?: string | null
           created_at?: string
           guest_email?: string
           guest_name?: string
           guest_phone?: string
           id?: string
           payment_confirmed?: boolean
+          qr_data?: string | null
           room_id?: string
           special_requests?: string | null
           total_amount?: number
@@ -158,7 +164,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_confirmation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"

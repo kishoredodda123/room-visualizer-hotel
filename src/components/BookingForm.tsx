@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { CalendarIcon, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import BookingConfirmation from './BookingConfirmation';
 
 interface BookingFormProps {
   roomType?: string;
@@ -32,8 +32,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     checkOut: undefined as Date | undefined,
     specialRequests: ''
   });
-  const [roomQuantity, setRoomQuantity] = useState(1);
+  const [numberOfRooms, setNumberOfRooms] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +49,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
-    if (roomQuantity < 1) {
+    if (numberOfRooms < 1) {
       toast({
         title: "Invalid Room Quantity",
         description: "Please select at least 1 room.",
@@ -72,16 +74,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
       const { data: availableRooms, error: roomsError } = await supabase
         .from('rooms')
-        .select('id')
+        .select('id, room_number')
         .eq('room_type_id', roomTypeData.id)
         .eq('status', 'available')
-        .limit(roomQuantity);
+        .limit(numberOfRooms);
 
       if (roomsError) {
         throw roomsError;
       }
 
-      if (availableRooms.length < roomQuantity) {
+      if (availableRooms.length < numberOfRooms) {
         toast({
           title: "Insufficient Rooms",
           description: `Only ${availableRooms.length} rooms are available. Please reduce the quantity.`,
@@ -90,49 +92,86 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return;
       }
 
-      // Create bookings for the selected number of rooms
-      const bookingPromises = availableRooms.map(async (room) => {
-        const { data, error } = await supabase
+      // Create booking for the first room (main booking)
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          room_id: availableRooms[0].id,
+          guest_name: formData.name,
+          guest_email: formData.email,
+          guest_phone: formData.phone,
+          check_in_date: formData.checkIn!.toISOString().split('T')[0],
+          check_out_date: formData.checkOut!.toISOString().split('T')[0],
+          special_requests: formData.specialRequests || null,
+          total_amount: roomPrice * numberOfRooms,
+          booking_status: 'confirmed',
+          payment_confirmed: true
+        })
+        .select('*, rooms(room_number)')
+        .single();
+
+      if (bookingError) {
+        console.error('Booking error:', bookingError);
+        throw bookingError;
+      }
+
+      // Create additional bookings for multiple rooms if needed
+      if (numberOfRooms > 1) {
+        const additionalBookings = availableRooms.slice(1).map(room => ({
+          room_id: room.id,
+          guest_name: formData.name,
+          guest_email: formData.email,
+          guest_phone: formData.phone,
+          check_in_date: formData.checkIn!.toISOString().split('T')[0],
+          check_out_date: formData.checkOut!.toISOString().split('T')[0],
+          special_requests: formData.specialRequests || null,
+          total_amount: roomPrice,
+          booking_status: 'confirmed',
+          payment_confirmed: true
+        }));
+
+        const { error: additionalError } = await supabase
           .from('bookings')
-          .insert({
-            room_id: room.id,
-            guest_name: formData.name,
-            guest_email: formData.email,
-            guest_phone: formData.phone,
-            check_in_date: formData.checkIn!.toISOString().split('T')[0],
-            check_out_date: formData.checkOut!.toISOString().split('T')[0],
-            special_requests: formData.specialRequests || null,
-            total_amount: roomPrice,
-            booking_status: 'pending'
-          })
-          .select();
+          .insert(additionalBookings);
 
-        if (error) {
-          console.error('Booking error:', error);
-          throw error;
+        if (additionalError) {
+          console.error('Additional bookings error:', additionalError);
         }
+      }
 
-        return data;
-      });
+      // Update room status to booked
+      const { error: updateError } = await supabase
+        .from('rooms')
+        .update({ status: 'booked' })
+        .in('id', availableRooms.map(room => room.id));
 
-      await Promise.all(bookingPromises);
+      if (updateError) {
+        console.error('Room status update error:', updateError);
+      }
 
+      // Prepare booking details for confirmation
+      const confirmationData = {
+        confirmation_code: booking.confirmation_code,
+        guest_name: booking.guest_name,
+        guest_email: booking.guest_email,
+        guest_phone: booking.guest_phone,
+        check_in_date: booking.check_in_date,
+        check_out_date: booking.check_out_date,
+        total_amount: booking.total_amount,
+        room_type: roomType,
+        room_number: booking.rooms?.room_number,
+        special_requests: booking.special_requests,
+        qr_data: booking.qr_data
+      };
+
+      setBookingDetails(confirmationData);
+      setShowConfirmation(true);
+      
       toast({
         title: "Booking Confirmed! 🎉",
-        description: `Your reservation for ${roomQuantity} room(s) has been confirmed. A confirmation email will be sent shortly.`,
+        description: `Your reservation for ${numberOfRooms} room(s) has been confirmed.`,
       });
       
-      console.log('Booking Details:', {
-        ...formData,
-        roomType,
-        roomQuantity,
-        roomPrice,
-        totalAmount: roomPrice * roomQuantity,
-        checkIn: formData.checkIn?.toISOString(),
-        checkOut: formData.checkOut?.toISOString()
-      });
-      
-      onClose();
     } catch (error) {
       console.error('Booking submission error:', error);
       toast({
@@ -146,14 +185,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
   };
 
   const incrementQuantity = () => {
-    setRoomQuantity(prev => prev + 1);
+    setNumberOfRooms(prev => prev + 1);
   };
 
   const decrementQuantity = () => {
-    setRoomQuantity(prev => Math.max(1, prev - 1));
+    setNumberOfRooms(prev => Math.max(1, prev - 1));
   };
 
-  const totalAmount = roomPrice * roomQuantity;
+  const totalAmount = roomPrice * numberOfRooms;
+
+  if (showConfirmation && bookingDetails) {
+    return <BookingConfirmation booking={bookingDetails} onClose={onClose} />;
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -185,13 +228,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={decrementQuantity}
-                    disabled={roomQuantity <= 1 || isSubmitting}
+                    disabled={numberOfRooms <= 1 || isSubmitting}
                     className="h-8 w-8 p-0"
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
                   <span className="font-semibold text-hotel-brown text-lg min-w-[2rem] text-center">
-                    {roomQuantity}
+                    {numberOfRooms}
                   </span>
                   <Button
                     type="button"
@@ -213,6 +256,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Full Name *</Label>
