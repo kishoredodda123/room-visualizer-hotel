@@ -1,6 +1,15 @@
+
 import { Phone, Mail, MapPin, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <footer className="bg-hotel-brown text-white py-12">
       <div className="container mx-auto px-4">
@@ -18,10 +27,38 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-hotel-gold">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="#gallery" className="text-hotel-brown-light hover:text-hotel-gold transition-colors">Gallery</a></li>
-              <li><a href="#services" className="text-hotel-brown-light hover:text-hotel-gold transition-colors">Services</a></li>
-              <li><a href="#rooms" className="text-hotel-brown-light hover:text-hotel-gold transition-colors">Rooms</a></li>
-              <li><a href="#contact" className="text-hotel-brown-light hover:text-hotel-gold transition-colors">Contact</a></li>
+              <li>
+                <button 
+                  onClick={() => scrollToSection('gallery')}
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors cursor-pointer"
+                >
+                  Gallery
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => scrollToSection('services')}
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors cursor-pointer"
+                >
+                  Services
+                </button>
+              </li>
+              <li>
+                <Link 
+                  to="/rooms"
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors"
+                >
+                  Rooms
+                </Link>
+              </li>
+              <li>
+                <button 
+                  onClick={() => scrollToSection('contact')}
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors cursor-pointer"
+                >
+                  Contact
+                </button>
+              </li>
             </ul>
           </div>
           
@@ -49,12 +86,22 @@ const Footer = () => {
               
               <div className="flex items-center space-x-3">
                 <Phone className="w-5 h-5 text-hotel-gold flex-shrink-0" />
-                <p className="text-hotel-brown-light">+91 8819-222-333</p>
+                <a 
+                  href="tel:+918819222333"
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors"
+                >
+                  +91 8819-222-333
+                </a>
               </div>
               
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-hotel-gold flex-shrink-0" />
-                <p className="text-hotel-brown-light">info@mvrresidency.com</p>
+                <a 
+                  href="mailto:info@mvrresidency.com"
+                  className="text-hotel-brown-light hover:text-hotel-gold transition-colors"
+                >
+                  info@mvrresidency.com
+                </a>
               </div>
 
               <div className="flex items-start space-x-3">

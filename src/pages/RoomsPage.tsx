@@ -79,11 +79,9 @@ const RoomsPage = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {roomTypes.map((room) => {
-              const IconComponent = getIconComponent;
-              
-              return (
-                <Card key={room.id} className="overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 bg-white/70 backdrop-blur-sm">
+            {roomTypes.map((room) => (
+              <Link key={room.id} to={`/rooms/${room.slug}`} className="block">
+                <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-0 bg-white/70 backdrop-blur-sm cursor-pointer">
                   <div className="relative overflow-hidden">
                     <img 
                       src={room.image_urls?.[0] || 'https://images.unsplash.com/photo-1505692433770-36f19f51681e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'} 
@@ -134,19 +132,17 @@ const RoomsPage = () => {
                       </div>
                     </div>
                     
-                    <div className="flex space-x-3">
-                      <Link to={`/rooms/${room.slug}`} className="flex-1">
-                        <Button 
-                          className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 text-lg transition-all duration-300 hover:shadow-lg"
-                        >
-                          Book Now
-                        </Button>
-                      </Link>
+                    <div className="text-center">
+                      <Button 
+                        className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 text-lg transition-all duration-300 hover:shadow-lg"
+                      >
+                        View Details & Book
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
