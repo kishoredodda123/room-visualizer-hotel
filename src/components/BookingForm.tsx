@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BookingFormProps {
   selectedRooms: string[];
@@ -33,8 +34,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
     checkOut: undefined as Date | undefined,
     specialRequests: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.phone || !formData.checkIn || !formData.checkOut) {
@@ -46,22 +48,62 @@ const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
-    // Simulate booking confirmation
-    toast({
-      title: "Booking Confirmed! 🎉",
-      description: `Your reservation for ${selectedRooms.length} room(s) has been confirmed. A confirmation email will be sent shortly.`,
-    });
-    
-    console.log('Booking Details:', {
-      ...formData,
-      selectedRooms,
-      roomType,
-      roomPrice,
-      checkIn: formData.checkIn?.toISOString(),
-      checkOut: formData.checkOut?.toISOString()
-    });
-    
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      // Create bookings for each selected room
+      const bookingPromises = selectedRooms.map(async (roomId) => {
+        const { data, error } = await supabase
+          .from('bookings')
+          .insert({
+            room_id: roomId,
+            guest_name: formData.name,
+            guest_email: formData.email,
+            guest_phone: formData.phone,
+            check_in_date: formData.checkIn!.toISOString().split('T')[0],
+            check_out_date: formData.checkOut!.toISOString().split('T')[0],
+            special_requests: formData.specialRequests || null,
+            total_amount: roomPrice,
+            booking_status: 'pending'
+          })
+          .select();
+
+        if (error) {
+          console.error('Booking error:', error);
+          throw error;
+        }
+
+        return data;
+      });
+
+      await Promise.all(bookingPromises);
+
+      toast({
+        title: "Booking Confirmed! 🎉",
+        description: `Your reservation for ${selectedRooms.length} room(s) has been confirmed. A confirmation email will be sent shortly.`,
+      });
+      
+      console.log('Booking Details:', {
+        ...formData,
+        selectedRooms,
+        roomType,
+        roomPrice,
+        totalAmount: roomPrice * selectedRooms.length,
+        checkIn: formData.checkIn?.toISOString(),
+        checkOut: formData.checkOut?.toISOString()
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Booking submission error:', error);
+      toast({
+        title: "Booking Failed",
+        description: "There was an error processing your booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getRoomNumbers = () => {
@@ -87,16 +129,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 <p className="font-semibold text-hotel-brown">{roomType}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Selected Rooms</p>
-                <p className="font-semibold text-hotel-brown">Room {getRoomNumbers()}</p>
-              </div>
-              <div>
                 <p className="text-sm text-muted-foreground">Number of Rooms</p>
                 <p className="font-semibold text-hotel-brown">{selectedRooms.length} room{selectedRooms.length > 1 ? 's' : ''}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Price per Night</p>
-                <p className="font-semibold text-hotel-gold text-lg">${roomPrice * selectedRooms.length}</p>
+                <p className="text-sm text-muted-foreground">Price per Room</p>
+                <p className="font-semibold text-hotel-gold">₹{roomPrice}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Amount</p>
+                <p className="font-semibold text-hotel-gold text-lg">₹{roomPrice * selectedRooms.length}</p>
               </div>
             </div>
           </div>
@@ -112,6 +154,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                   placeholder="Enter your full name"
                   required
                   className="mt-1"
+                  disabled={isSubmitting}
                 />
               </div>
               
@@ -125,6 +168,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                   placeholder="Enter your email"
                   required
                   className="mt-1"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -139,6 +183,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 placeholder="Enter your phone number"
                 required
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -153,6 +198,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         "w-full justify-start text-left font-normal mt-1",
                         !formData.checkIn && "text-muted-foreground"
                       )}
+                      disabled={isSubmitting}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.checkIn ? format(formData.checkIn, "PPP") : "Select check-in date"}
@@ -181,6 +227,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                         "w-full justify-start text-left font-normal mt-1",
                         !formData.checkOut && "text-muted-foreground"
                       )}
+                      disabled={isSubmitting}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.checkOut ? format(formData.checkOut, "PPP") : "Select check-out date"}
@@ -209,6 +256,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 placeholder="Any special requests or preferences..."
                 rows={3}
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -218,14 +266,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 variant="outline" 
                 onClick={onClose}
                 className="flex-1 py-3"
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
                 className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 transition-all duration-300 hover:shadow-lg"
+                disabled={isSubmitting}
               >
-                Confirm Booking
+                {isSubmitting ? 'Processing...' : 'Confirm Booking'}
               </Button>
             </div>
           </form>
