@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import BookingConfirmation from './BookingConfirmation';
+import { useQuery } from '@tanstack/react-query';
 
 interface BookingFormProps {
   roomType?: string;
@@ -37,6 +38,24 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
 
+  // Fetch room type details to get the correct price
+  const { data: roomTypeData } = useQuery({
+    queryKey: ['room-type', roomType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('room_types')
+        .select('*')
+        .eq('name', roomType)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!roomType
+  });
+
+  const actualPrice = roomTypeData?.price || roomPrice;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -61,29 +80,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Get room type data
-      const { data: roomTypeData, error: roomTypeError } = await supabase
-        .from('room_types')
-        .select('id')
-        .eq('name', roomType)
-        .single();
-
-      if (roomTypeError) {
-        throw roomTypeError;
-      }
-
       // Create booking with pending status (no room assigned yet)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          room_id: null, // No room assigned initially
+          room_id: null, // No room assigned initially - this is now allowed
           guest_name: formData.name,
           guest_email: formData.email,
           guest_phone: formData.phone,
           check_in_date: formData.checkIn!.toISOString().split('T')[0],
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
-          total_amount: roomPrice * numberOfRooms,
+          total_amount: actualPrice * numberOfRooms,
           booking_status: 'pending' as const, // Set to pending for admin allocation
           payment_confirmed: true
         })
@@ -105,7 +113,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           check_in_date: formData.checkIn!.toISOString().split('T')[0],
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
-          total_amount: roomPrice,
+          total_amount: actualPrice,
           booking_status: 'pending' as const,
           payment_confirmed: true
         }));
@@ -164,7 +172,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setNumberOfRooms(prev => Math.max(1, prev - 1));
   };
 
-  const totalAmount = roomPrice * numberOfRooms;
+  const totalAmount = actualPrice * numberOfRooms;
 
   if (showConfirmation && bookingDetails) {
     return <BookingConfirmation booking={bookingDetails} onClose={onClose} />;
@@ -190,7 +198,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Price per Room</p>
-                <p className="font-semibold text-hotel-gold">₹{roomPrice}</p>
+                <p className="font-semibold text-hotel-gold">₹{actualPrice}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Number of Rooms</p>
