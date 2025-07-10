@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface Booking {
   id: string;
-  room_id: string;
+  room_id: string | null;
   guest_name: string;
   guest_email: string;
   guest_phone: string;
@@ -29,7 +29,7 @@ interface Booking {
     room_types: {
       name: string;
     };
-  };
+  } | null;
 }
 
 interface Room {
@@ -120,21 +120,68 @@ const RoomStatusView = () => {
     }
   });
 
+  const checkOutGuest = useMutation({
+    mutationFn: async (bookingId: string) => {
+      // Get booking details first
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select('room_id')
+        .eq('id', bookingId)
+        .single();
+      
+      if (bookingError) throw bookingError;
+
+      // Update booking status to completed
+      const { error: updateBookingError } = await supabase
+        .from('bookings')
+        .update({ booking_status: 'completed' as const })
+        .eq('id', bookingId);
+      
+      if (updateBookingError) throw updateBookingError;
+
+      // Update room status back to available
+      if (booking.room_id) {
+        const { error: roomError } = await supabase
+          .from('rooms')
+          .update({ status: 'available' as const })
+          .eq('id', booking.room_id);
+        
+        if (roomError) throw roomError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['room-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['room-grid-allocation'] });
+      toast({
+        title: "Guest Checked Out",
+        description: "Guest has been checked out and room is now available.",
+      });
+    }
+  });
+
   const getBookingsByCategory = () => {
     const now = new Date();
     
+    // New bookings: pending status (waiting for room allocation)
     const newBookings = bookings.filter(booking => 
       booking.booking_status === 'pending'
     );
 
+    // Active bookings: confirmed status with rooms allocated and not yet past checkout
     const activeBookings = bookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
-      return booking.booking_status === 'confirmed' && checkOut >= now;
+      return booking.booking_status === 'confirmed' && 
+             booking.room_id && 
+             checkOut >= now;
     });
 
+    // Past bookings: completed status or past checkout date
     const pastBookings = bookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
-      return booking.booking_status === 'completed' || (checkOut < now && booking.booking_status === 'confirmed');
+      return booking.booking_status === 'completed' || 
+             (booking.booking_status === 'confirmed' && checkOut < now);
     });
 
     return { newBookings, activeBookings, pastBookings };
@@ -142,7 +189,7 @@ const RoomStatusView = () => {
 
   const { newBookings, activeBookings, pastBookings } = getBookingsByCategory();
 
-  const renderBookingCard = (booking: Booking, showAllocateButton = false) => (
+  const renderBookingCard = (booking: Booking, showAllocateButton = false, showCheckOutButton = false) => (
     <Card key={booking.id} className="mb-4 border-hotel-gold/20">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
@@ -170,10 +217,12 @@ const RoomStatusView = () => {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-hotel-gold" />
-              <span className="text-sm">{booking.rooms?.room_types?.name}</span>
-            </div>
+            {booking.rooms?.room_types?.name && (
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-hotel-gold" />
+                <span className="text-sm">{booking.rooms.room_types.name}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-hotel-gold" />
               <span className="text-sm">{booking.guest_email}</span>
@@ -233,6 +282,16 @@ const RoomStatusView = () => {
             </Button>
           </div>
         )}
+
+        {showCheckOutButton && (
+          <Button
+            onClick={() => checkOutGuest.mutate(booking.id)}
+            disabled={checkOutGuest.isPending}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {checkOutGuest.isPending ? 'Checking Out...' : 'Check Out Guest'}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -275,7 +334,7 @@ const RoomStatusView = () => {
                 </CardContent>
               </Card>
             ) : (
-              newBookings.map(booking => renderBookingCard(booking, true))
+              newBookings.map(booking => renderBookingCard(booking, true, false))
             )}
           </div>
         </TabsContent>
@@ -289,7 +348,7 @@ const RoomStatusView = () => {
                 </CardContent>
               </Card>
             ) : (
-              activeBookings.map(booking => renderBookingCard(booking))
+              activeBookings.map(booking => renderBookingCard(booking, false, true))
             )}
           </div>
         </TabsContent>
@@ -303,7 +362,7 @@ const RoomStatusView = () => {
                 </CardContent>
               </Card>
             ) : (
-              pastBookings.map(booking => renderBookingCard(booking))
+              pastBookings.map(booking => renderBookingCard(booking, false, false))
             )}
           </div>
         </TabsContent>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +61,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Get available rooms of the selected type
+      // Get room type data
       const { data: roomTypeData, error: roomTypeError } = await supabase
         .from('room_types')
         .select('id')
@@ -73,31 +72,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         throw roomTypeError;
       }
 
-      const { data: availableRooms, error: roomsError } = await supabase
-        .from('rooms')
-        .select('id, room_number')
-        .eq('room_type_id', roomTypeData.id)
-        .eq('status', 'available')
-        .limit(numberOfRooms);
-
-      if (roomsError) {
-        throw roomsError;
-      }
-
-      if (availableRooms.length < numberOfRooms) {
-        toast({
-          title: "Insufficient Rooms",
-          description: `Only ${availableRooms.length} rooms are available. Please reduce the quantity.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create booking for the first room (main booking)
+      // Create booking with pending status (no room assigned yet)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          room_id: availableRooms[0].id,
+          room_id: null, // No room assigned initially
           guest_name: formData.name,
           guest_email: formData.email,
           guest_phone: formData.phone,
@@ -105,10 +84,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
           total_amount: roomPrice * numberOfRooms,
-          booking_status: 'confirmed' as const,
+          booking_status: 'pending' as const, // Set to pending for admin allocation
           payment_confirmed: true
         })
-        .select('*, rooms(room_number)')
+        .select('*')
         .single();
 
       if (bookingError) {
@@ -118,8 +97,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
       // Create additional bookings for multiple rooms if needed
       if (numberOfRooms > 1) {
-        const additionalBookings = availableRooms.slice(1).map(room => ({
-          room_id: room.id,
+        const additionalBookings = Array.from({ length: numberOfRooms - 1 }, () => ({
+          room_id: null, // No room assigned initially
           guest_name: formData.name,
           guest_email: formData.email,
           guest_phone: formData.phone,
@@ -127,11 +106,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
           total_amount: roomPrice,
-          booking_status: 'confirmed' as const,
+          booking_status: 'pending' as const,
           payment_confirmed: true
         }));
 
-        // Insert additional bookings one by one to avoid the array type issue
         for (const additionalBooking of additionalBookings) {
           const { error: additionalError } = await supabase
             .from('bookings')
@@ -141,16 +119,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
             console.error('Additional booking error:', additionalError);
           }
         }
-      }
-
-      // Update room status to booked
-      const { error: updateError } = await supabase
-        .from('rooms')
-        .update({ status: 'booked' })
-        .in('id', availableRooms.map(room => room.id));
-
-      if (updateError) {
-        console.error('Room status update error:', updateError);
       }
 
       // Prepare booking details for confirmation
@@ -163,7 +131,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         check_out_date: booking.check_out_date,
         total_amount: booking.total_amount,
         room_type: roomType,
-        room_number: booking.rooms?.room_number,
+        room_number: null, // No room assigned yet
         special_requests: booking.special_requests,
         qr_data: booking.qr_data
       };
@@ -173,7 +141,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
       
       toast({
         title: "Booking Confirmed! 🎉",
-        description: `Your reservation for ${numberOfRooms} room(s) has been confirmed.`,
+        description: `Your reservation for ${numberOfRooms} room(s) has been confirmed. Room will be allocated by admin.`,
       });
       
     } catch (error) {

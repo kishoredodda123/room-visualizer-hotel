@@ -34,28 +34,7 @@ const RoomAllocationGrid = () => {
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ['room-grid-allocation'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rooms')
-        .select(`
-          *,
-          room_types (
-            name,
-            slug
-          ),
-          bookings!inner (
-            id,
-            guest_name,
-            check_in_date,
-            check_out_date,
-            booking_status
-          )
-        `)
-        .eq('bookings.booking_status', 'confirmed')
-        .order('room_number');
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      // Also get rooms without bookings
+      // Get all rooms with their details
       const { data: allRooms, error: allRoomsError } = await supabase
         .from('rooms')
         .select(`
@@ -69,10 +48,25 @@ const RoomAllocationGrid = () => {
       
       if (allRoomsError) throw allRoomsError;
       
+      // Get active bookings
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          room_id,
+          guest_name,
+          check_in_date,
+          check_out_date,
+          booking_status
+        `)
+        .eq('booking_status', 'confirmed');
+      
+      if (bookingsError) throw bookingsError;
+      
       // Merge rooms with booking data
       const roomsWithBookings = allRooms.map(room => ({
         ...room,
-        bookings: data?.filter(r => r.id === room.id)?.[0]?.bookings || []
+        bookings: bookings?.filter(booking => booking.room_id === room.id) || []
       }));
       
       return roomsWithBookings as Room[];
@@ -81,14 +75,21 @@ const RoomAllocationGrid = () => {
 
   const updateRoomStatus = useMutation({
     mutationFn: async ({ roomId, status }: { roomId: string; status: string }) => {
-      const { error } = await supabase
+      console.log('Updating room status:', { roomId, status });
+      
+      const { data, error } = await supabase
         .from('rooms')
         .update({ status: status as any })
-        .eq('id', roomId);
+        .eq('id', roomId)
+        .select();
+      
+      console.log('Update result:', { data, error });
       
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Room status updated successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['room-grid-allocation'] });
       queryClient.invalidateQueries({ queryKey: ['room-overview'] });
       queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
@@ -98,21 +99,29 @@ const RoomAllocationGrid = () => {
         title: "Room Status Updated",
         description: "Room status has been successfully updated.",
       });
+    },
+    onError: (error) => {
+      console.error('Error updating room status:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update room status. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available':
-        return 'bg-green-500 hover:bg-green-600';
+        return 'bg-green-500 hover:bg-green-600 text-white';
       case 'booked':
-        return 'bg-red-500 hover:bg-red-600';
+        return 'bg-red-500 hover:bg-red-600 text-white';
       case 'prebooked':
-        return 'bg-yellow-500 hover:bg-yellow-600';
+        return 'bg-yellow-500 hover:bg-yellow-600 text-white';
       case 'maintenance':
-        return 'bg-gray-500 hover:bg-gray-600';
+        return 'bg-gray-500 hover:bg-gray-600 text-white';
       default:
-        return 'bg-gray-300 hover:bg-gray-400';
+        return 'bg-gray-300 hover:bg-gray-400 text-black';
     }
   };
 
@@ -203,7 +212,7 @@ const RoomAllocationGrid = () => {
                     <DialogTrigger asChild>
                       <div
                         className={`
-                          relative aspect-square rounded-lg flex items-center justify-center text-white text-sm font-semibold cursor-pointer
+                          relative aspect-square rounded-lg flex items-center justify-center text-sm font-semibold cursor-pointer
                           transition-all duration-200 transform hover:scale-105 hover:shadow-lg group
                           ${getStatusColor(room.status)}
                         `}
@@ -258,10 +267,13 @@ const RoomAllocationGrid = () => {
                         </div>
                         
                         <Button
-                          onClick={() => updateRoomStatus.mutate({ 
-                            roomId: room.id, 
-                            status: newStatus 
-                          })}
+                          onClick={() => {
+                            console.log('Button clicked with:', { roomId: room.id, status: newStatus });
+                            updateRoomStatus.mutate({ 
+                              roomId: room.id, 
+                              status: newStatus 
+                            });
+                          }}
                           disabled={!newStatus || updateRoomStatus.isPending}
                           className="w-full"
                         >
