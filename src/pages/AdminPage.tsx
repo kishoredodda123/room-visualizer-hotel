@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, MapPin, Search, Grid3X3 } from 'lucide-react';
+import { Calendar, BarChart3, Grid3X3, Search } from 'lucide-react';
 import RoomStatusView from '@/components/admin/RoomStatusView';
 import RoomOverview from '@/components/admin/RoomOverview';
 import RoomAllocationGrid from '@/components/admin/RoomAllocationGrid';
@@ -24,10 +24,10 @@ const AdminPage = () => {
             <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="room-status" className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Room Status
+                Booking Status
               </TabsTrigger>
               <TabsTrigger value="room-overview" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
+                <BarChart3 className="w-4 h-4" />
                 Room Overview
               </TabsTrigger>
               <TabsTrigger value="room-grid" className="flex items-center gap-2">

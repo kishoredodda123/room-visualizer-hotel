@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RoomStats {
@@ -96,46 +96,6 @@ const RoomOverview = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Room Details Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Room Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Room Number</th>
-                  <th className="text-left p-2">Type</th>
-                  <th className="text-left p-2">Floor</th>
-                  <th className="text-left p-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rooms.map((room) => (
-                  <tr key={room.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2 font-mono">{room.room_number}</td>
-                    <td className="p-2">{room.room_types?.name}</td>
-                    <td className="p-2">Floor {room.floor}</td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        room.status === 'available' ? 'bg-green-100 text-green-800' :
-                        room.status === 'booked' ? 'bg-red-100 text-red-800' :
-                        room.status === 'prebooked' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {room.status.charAt(0).toUpperCase() + room.status.slice(1)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

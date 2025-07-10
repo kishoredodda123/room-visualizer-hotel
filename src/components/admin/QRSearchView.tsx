@@ -71,6 +71,9 @@ const QRSearchView = () => {
     }
   };
 
+  const isRoomAllocated = bookingDetails?.rooms?.room_number;
+  const showAllocateButton = bookingDetails && bookingDetails.booking_status === 'pending' && !isRoomAllocated;
+
   return (
     <div className="space-y-6">
       <div>
@@ -233,9 +236,11 @@ const QRSearchView = () => {
             )}
 
             <div className="mt-6 flex gap-4">
-              <Button className="bg-hotel-gold hover:bg-hotel-gold/90">
-                Allocate Room
-              </Button>
+              {showAllocateButton && (
+                <Button className="bg-hotel-gold hover:bg-hotel-gold/90">
+                  Allocate Room
+                </Button>
+              )}
               <Button variant="outline">
                 Print Details
               </Button>

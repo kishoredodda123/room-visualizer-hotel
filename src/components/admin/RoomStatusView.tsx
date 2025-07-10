@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, MapPin, Phone, Mail, User, CreditCard, CheckCircle, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Phone, Mail, User, CreditCard, CheckCircle, Clock, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -31,8 +32,18 @@ interface Booking {
   };
 }
 
+interface Room {
+  id: string;
+  room_number: string;
+  status: 'available' | 'prebooked' | 'booked' | 'maintenance';
+  room_types: {
+    name: string;
+  };
+}
+
 const RoomStatusView = () => {
   const [activeTab, setActiveTab] = useState('new');
+  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<string>('');
   const queryClient = useQueryClient();
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -56,17 +67,52 @@ const RoomStatusView = () => {
     }
   });
 
-  const allocateRoom = useMutation({
-    mutationFn: async ({ bookingId, roomNumber }: { bookingId: string; roomNumber: string }) => {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ booking_status: 'confirmed' as const })
-        .eq('id', bookingId);
+  const { data: availableRooms = [] } = useQuery({
+    queryKey: ['available-rooms'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select(`
+          *,
+          room_types (
+            name
+          )
+        `)
+        .eq('status', 'available')
+        .order('room_number');
       
       if (error) throw error;
+      return data as Room[];
+    }
+  });
+
+  const allocateRoom = useMutation({
+    mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
+      // Update booking with room and set status to confirmed
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ 
+          room_id: roomId,
+          booking_status: 'confirmed' as const 
+        })
+        .eq('id', bookingId);
+      
+      if (bookingError) throw bookingError;
+
+      // Update room status to booked
+      const { error: roomError } = await supabase
+        .from('rooms')
+        .update({ status: 'booked' as const })
+        .eq('id', roomId);
+      
+      if (roomError) throw roomError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['room-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['room-grid-allocation'] });
+      setSelectedRoomForBooking('');
       toast({
         title: "Room Allocated",
         description: "Room has been successfully allocated to the guest.",
@@ -88,7 +134,7 @@ const RoomStatusView = () => {
 
     const pastBookings = bookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
-      return booking.booking_status === 'completed' || checkOut < now;
+      return booking.booking_status === 'completed' || (checkOut < now && booking.booking_status === 'confirmed');
     });
 
     return { newBookings, activeBookings, pastBookings };
@@ -160,16 +206,32 @@ const RoomStatusView = () => {
         )}
 
         {showAllocateButton && (
-          <Button
-            onClick={() => allocateRoom.mutate({ 
-              bookingId: booking.id, 
-              roomNumber: booking.rooms?.room_number || 'TBD' 
-            })}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Allocate Room
-          </Button>
+          <div className="space-y-3">
+            <Select value={selectedRoomForBooking} onValueChange={setSelectedRoomForBooking}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select room to allocate" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRooms.map((room) => (
+                  <SelectItem key={room.id} value={room.id}>
+                    Room {room.room_number} - {room.room_types.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button
+              onClick={() => allocateRoom.mutate({ 
+                bookingId: booking.id, 
+                roomId: selectedRoomForBooking 
+              })}
+              disabled={!selectedRoomForBooking || allocateRoom.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              {allocateRoom.isPending ? 'Allocating...' : 'Allocate Room'}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -179,14 +241,14 @@ const RoomStatusView = () => {
     return (
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-hotel-gold mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">Loading room status...</p>
+        <p className="mt-4 text-muted-foreground">Loading booking status...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-hotel-brown">Room Status Management</h2>
+      <h2 className="text-2xl font-semibold text-hotel-brown">Booking Status Management</h2>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
