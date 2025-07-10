@@ -1,0 +1,184 @@
+
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Room {
+  id: string;
+  room_number: string;
+  status: 'available' | 'prebooked' | 'booked' | 'maintenance';
+  floor: number;
+  room_types: {
+    name: string;
+    slug: string;
+  };
+  bookings: Array<{
+    id: string;
+    guest_name: string;
+    check_in_date: string;
+    check_out_date: string;
+    booking_status: string;
+  }>;
+}
+
+const RoomAllocationGrid = () => {
+  const { data: rooms = [], isLoading } = useQuery({
+    queryKey: ['room-grid-allocation'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select(`
+          *,
+          room_types (
+            name,
+            slug
+          ),
+          bookings (
+            id,
+            guest_name,
+            check_in_date,
+            check_out_date,
+            booking_status
+          )
+        `)
+        .order('room_number');
+      
+      if (error) throw error;
+      return data as Room[];
+    }
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-500 hover:bg-green-600';
+      case 'booked':
+        return 'bg-red-500 hover:bg-red-600';
+      case 'prebooked':
+        return 'bg-yellow-500 hover:bg-yellow-600';
+      case 'maintenance':
+        return 'bg-gray-500 hover:bg-gray-600';
+      default:
+        return 'bg-gray-300 hover:bg-gray-400';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'Available';
+      case 'booked':
+        return 'Booked';
+      case 'prebooked':
+        return 'Pre-booked';
+      case 'maintenance':
+        return 'Maintenance';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const groupRoomsByType = () => {
+    const grouped: Record<string, Room[]> = {};
+    rooms.forEach(room => {
+      const typeName = room.room_types.name;
+      if (!grouped[typeName]) {
+        grouped[typeName] = [];
+      }
+      grouped[typeName].push(room);
+    });
+    return grouped;
+  };
+
+  const getCurrentGuest = (room: Room) => {
+    const activeBooking = room.bookings.find(
+      booking => booking.booking_status === 'confirmed'
+    );
+    return activeBooking?.guest_name || null;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-hotel-gold mx-auto"></div>
+        <p className="mt-4 text-muted-foreground">Loading room allocation grid...</p>
+      </div>
+    );
+  }
+
+  const groupedRooms = groupRoomsByType();
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-semibold text-hotel-brown mb-4">Room Allocation Grid</h2>
+        <p className="text-muted-foreground mb-6">BookMyShow style room visualization - hover over rooms to see guest details</p>
+        
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span className="text-sm">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <span className="text-sm">Booked</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+            <span className="text-sm">Pre-booked</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-500 rounded"></div>
+            <span className="text-sm">Maintenance</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Room Grid by Type */}
+      {Object.entries(groupedRooms).map(([roomType, typeRooms]) => (
+        <Card key={roomType}>
+          <CardHeader>
+            <CardTitle className="text-hotel-brown">{roomType} ({typeRooms.length} rooms)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
+              {typeRooms.map((room) => {
+                const currentGuest = getCurrentGuest(room);
+                return (
+                  <div
+                    key={room.id}
+                    className={`
+                      relative aspect-square rounded-lg flex items-center justify-center text-white text-sm font-semibold cursor-pointer
+                      transition-all duration-200 transform hover:scale-105 hover:shadow-lg
+                      ${getStatusColor(room.status)}
+                    `}
+                    title={`Room ${room.room_number} - ${getStatusText(room.status)}${
+                      currentGuest ? ` (${currentGuest})` : ''
+                    }`}
+                  >
+                    <span className="text-center leading-tight">{room.room_number}</span>
+                    {currentGuest && (
+                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <span className="text-xs">👤</span>
+                      </div>
+                    )}
+                    
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                      Room {room.room_number}<br/>
+                      Status: {getStatusText(room.status)}<br/>
+                      {currentGuest && `Guest: ${currentGuest}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+export default RoomAllocationGrid;
