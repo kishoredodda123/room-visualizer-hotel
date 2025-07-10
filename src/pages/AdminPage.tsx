@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
@@ -63,7 +62,7 @@ const AdminPage = () => {
   });
 
   const updateBookingStatus = useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: string; status: string }) => {
+    mutationFn: async ({ bookingId, status }: { bookingId: string; status: 'pending' | 'confirmed' | 'cancelled' | 'completed' }) => {
       const { data, error } = await supabase
         .from('bookings')
         .update({ booking_status: status })
@@ -116,7 +115,7 @@ const AdminPage = () => {
 
   const { activeBookings, pastBookings, cancelledBookings } = getBookingsByCategory();
 
-  const handleStatusUpdate = (bookingId: string, newStatus: string) => {
+  const handleStatusUpdate = (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled' | 'completed') => {
     updateBookingStatus.mutate({ bookingId, status: newStatus });
   };
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
           total_amount: roomPrice * numberOfRooms,
-          booking_status: 'confirmed',
+          booking_status: 'confirmed' as const,
           payment_confirmed: true
         })
         .select('*, rooms(room_number)')
@@ -126,16 +127,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
           check_out_date: formData.checkOut!.toISOString().split('T')[0],
           special_requests: formData.specialRequests || null,
           total_amount: roomPrice,
-          booking_status: 'confirmed',
+          booking_status: 'confirmed' as const,
           payment_confirmed: true
         }));
 
-        const { error: additionalError } = await supabase
-          .from('bookings')
-          .insert(additionalBookings);
+        // Insert additional bookings one by one to avoid the array type issue
+        for (const additionalBooking of additionalBookings) {
+          const { error: additionalError } = await supabase
+            .from('bookings')
+            .insert(additionalBooking);
 
-        if (additionalError) {
-          console.error('Additional bookings error:', additionalError);
+          if (additionalError) {
+            console.error('Additional booking error:', additionalError);
+          }
         }
       }
 
