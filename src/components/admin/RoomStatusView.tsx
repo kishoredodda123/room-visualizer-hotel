@@ -24,6 +24,7 @@ interface Booking {
   payment_confirmed: boolean;
   confirmation_code: string;
   created_at: string;
+  number_of_rooms: number;
   rooms: {
     room_number: string;
     room_types: {
@@ -45,7 +46,7 @@ interface Room {
 
 const RoomStatusView = () => {
   const [activeTab, setActiveTab] = useState('new');
-  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<string>('');
+  const [selectedRooms, setSelectedRooms] = useState<{[key: string]: string[]}>({});
   const queryClient = useQueryClient();
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -101,10 +102,14 @@ const RoomStatusView = () => {
 
   // Get room type for a specific booking based on total amount
   const getBookingRoomType = (booking: Booking) => {
-    if (booking.total_amount <= 1500) {
+    const pricePerRoom = booking.total_amount / (booking.number_of_rooms || 1);
+    
+    if (pricePerRoom <= 1500) {
       return 'Non A/C Room';
+    } else if (pricePerRoom <= 3000) {
+      return 'A/C Room';  
     } else {
-      return 'A/C Room';
+      return 'Suite Room';
     }
   };
 
@@ -118,40 +123,89 @@ const RoomStatusView = () => {
     return filtered;
   };
 
-  const allocateRoom = useMutation({
-    mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
-      console.log('Starting room allocation:', { bookingId, roomId });
+  const allocateRooms = useMutation({
+    mutationFn: async ({ bookingId, roomIds }: { bookingId: string; roomIds: string[] }) => {
+      console.log('Starting room allocation:', { bookingId, roomIds });
       
-      // Update booking with room and set status to confirmed
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('bookings')
-        .update({ 
-          room_id: roomId,
-          booking_status: 'confirmed' as const 
-        })
-        .eq('id', bookingId)
-        .select('*');
+      const results = [];
       
-      if (bookingError) {
-        console.error('Error updating booking:', bookingError);
-        throw bookingError;
-      }
-      console.log('Booking updated:', bookingData);
+      // Allocate first room to the main booking
+      if (roomIds.length > 0) {
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .update({ 
+            room_id: roomIds[0],
+            booking_status: 'confirmed' as const 
+          })
+          .eq('id', bookingId)
+          .select('*');
+        
+        if (bookingError) {
+          console.error('Error updating booking:', bookingError);
+          throw bookingError;
+        }
 
-      // Update room status to booked
-      const { data: roomData, error: roomError } = await supabase
-        .from('rooms')
-        .update({ status: 'booked' as const })
-        .eq('id', roomId)
-        .select('*');
-      
-      if (roomError) {
-        console.error('Error updating room status:', roomError);
-        throw roomError;
-      }
-      console.log('Room status updated to booked:', roomData);
+        // Update room status to booked
+        const { error: roomError } = await supabase
+          .from('rooms')
+          .update({ status: 'booked' as const })
+          .eq('id', roomIds[0]);
+        
+        if (roomError) {
+          console.error('Error updating room status:', roomError);
+          throw roomError;
+        }
 
-      return { booking: bookingData, room: roomData };
+        results.push(bookingData);
+      }
+
+      // Create additional bookings for remaining rooms
+      for (let i = 1; i < roomIds.length; i++) {
+        const originalBooking = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('id', bookingId)
+          .single();
+
+        if (originalBooking.error) throw originalBooking.error;
+
+        const { data: additionalBooking, error: additionalError } = await supabase
+          .from('bookings')
+          .insert({
+            room_id: roomIds[i],
+            guest_name: originalBooking.data.guest_name,
+            guest_email: originalBooking.data.guest_email,
+            guest_phone: originalBooking.data.guest_phone,
+            check_in_date: originalBooking.data.check_in_date,
+            check_out_date: originalBooking.data.check_out_date,
+            special_requests: originalBooking.data.special_requests,
+            total_amount: originalBooking.data.total_amount / (originalBooking.data.number_of_rooms || 1),
+            booking_status: 'confirmed' as const,
+            payment_confirmed: true,
+            number_of_rooms: 1
+          })
+          .select('*');
+
+        if (additionalError) {
+          console.error('Error creating additional booking:', additionalError);
+          throw additionalError;
+        }
+
+        // Update room status to booked
+        const { error: roomError } = await supabase
+          .from('rooms')
+          .update({ status: 'booked' as const })
+          .eq('id', roomIds[i]);
+        
+        if (roomError) {
+          console.error('Error updating room status:', roomError);
+          throw roomError;
+        }
+
+        results.push(additionalBooking);
+      }
+
+      return results;
     },
     onSuccess: (data) => {
       console.log('Room allocation completed successfully:', data);
@@ -159,17 +213,17 @@ const RoomStatusView = () => {
       queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       queryClient.invalidateQueries({ queryKey: ['room-overview'] });
       queryClient.invalidateQueries({ queryKey: ['room-grid-allocation'] });
-      setSelectedRoomForBooking('');
+      setSelectedRooms({});
       toast({
-        title: "Room Allocated",
-        description: "Room has been successfully allocated to the guest.",
+        title: "Rooms Allocated",
+        description: "Rooms have been successfully allocated to the guest.",
       });
     },
     onError: (error) => {
-      console.error('Error allocating room:', error);
+      console.error('Error allocating rooms:', error);
       toast({
         title: "Allocation Failed",
-        description: "Failed to allocate room. Please try again.",
+        description: "Failed to allocate rooms. Please try again.",
         variant: "destructive",
       });
     }
@@ -241,13 +295,36 @@ const RoomStatusView = () => {
   const getBookingsByCategory = () => {
     const now = new Date();
     
+    // Group bookings by confirmation code for multiple room bookings
+    const groupedBookings = bookings.reduce((acc, booking) => {
+      const key = booking.confirmation_code;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(booking);
+      return acc;
+    }, {} as Record<string, Booking[]>);
+
+    // Convert grouped bookings back to single booking objects with room count
+    const processedBookings = Object.values(groupedBookings).map(group => {
+      const mainBooking = group[0];
+      const totalRooms = group.length;
+      const totalAmount = group.reduce((sum, b) => sum + b.total_amount, 0);
+      
+      return {
+        ...mainBooking,
+        number_of_rooms: totalRooms,
+        total_amount: totalAmount
+      };
+    });
+
     // New bookings: pending status (waiting for room allocation)
-    const newBookings = bookings.filter(booking => 
+    const newBookings = processedBookings.filter(booking => 
       booking.booking_status === 'pending'
     );
 
     // Active bookings: confirmed status with rooms allocated and not yet past checkout
-    const activeBookings = bookings.filter(booking => {
+    const activeBookings = processedBookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
       return booking.booking_status === 'confirmed' && 
              booking.room_id && 
@@ -255,7 +332,7 @@ const RoomStatusView = () => {
     });
 
     // Past bookings: completed status or past checkout date
-    const pastBookings = bookings.filter(booking => {
+    const pastBookings = processedBookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
       return booking.booking_status === 'completed' || 
              (booking.booking_status === 'confirmed' && checkOut < now);
@@ -266,9 +343,20 @@ const RoomStatusView = () => {
 
   const { newBookings, activeBookings, pastBookings } = getBookingsByCategory();
 
+  const handleRoomSelection = (bookingId: string, roomId: string, index: number) => {
+    setSelectedRooms(prev => {
+      const current = prev[bookingId] || [];
+      const updated = [...current];
+      updated[index] = roomId;
+      return { ...prev, [bookingId]: updated };
+    });
+  };
+
   const renderBookingCard = (booking: Booking, showAllocateButton = false, showCheckOutButton = false) => {
     const filteredRooms = showAllocateButton ? getFilteredRoomsForBooking(booking) : [];
     const bookingRoomType = getBookingRoomType(booking);
+    const numberOfRooms = booking.number_of_rooms || 1;
+    const selectedRoomsForBooking = selectedRooms[booking.id] || [];
     
     return (
       <Card key={booking.id} className="mb-4 border-hotel-gold/20">
@@ -295,18 +383,15 @@ const RoomStatusView = () => {
               <Badge variant="outline" className="text-green-600 border-green-600">
                 {bookingRoomType}
               </Badge>
+              <Badge variant="outline" className="text-purple-600 border-purple-600">
+                {numberOfRooms} Room{numberOfRooms > 1 ? 's' : ''}
+              </Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="space-y-2">
-              {booking.rooms?.room_types?.name && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-hotel-gold" />
-                  <span className="text-sm">{booking.rooms.room_types.name}</span>
-                </div>
-              )}
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-hotel-gold" />
                 <span className="text-sm">{booking.guest_email}</span>
@@ -341,33 +426,48 @@ const RoomStatusView = () => {
           {showAllocateButton && (
             <div className="space-y-3">
               <div className="text-sm text-muted-foreground">
-                Available {bookingRoomType} rooms ({filteredRooms.length}):
+                Available {bookingRoomType} rooms ({filteredRooms.length}) - Allocate {numberOfRooms} room{numberOfRooms > 1 ? 's' : ''}:
               </div>
-              <Select value={selectedRoomForBooking} onValueChange={setSelectedRoomForBooking}>
-                <SelectTrigger>
-                  <SelectValue placeholder={`Select ${bookingRoomType} to allocate`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredRooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      Room {room.room_number} - {room.room_types.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {Array.from({ length: numberOfRooms }, (_, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="text-sm font-medium w-16">Room {index + 1}:</span>
+                  <Select 
+                    value={selectedRoomsForBooking[index] || ''} 
+                    onValueChange={(value) => handleRoomSelection(booking.id, value, index)}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={`Select ${bookingRoomType}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredRooms
+                        .filter(room => !selectedRoomsForBooking.includes(room.id) || selectedRoomsForBooking[index] === room.id)
+                        .map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          Room {room.room_number} - {room.room_types.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
               
               <Button
-                onClick={() => allocateRoom.mutate({ 
+                onClick={() => allocateRooms.mutate({ 
                   bookingId: booking.id, 
-                  roomId: selectedRoomForBooking 
+                  roomIds: selectedRoomsForBooking.filter(Boolean)
                 })}
-                disabled={!selectedRoomForBooking || allocateRoom.isPending || filteredRooms.length === 0}
+                disabled={
+                  selectedRoomsForBooking.filter(Boolean).length !== numberOfRooms || 
+                  allocateRooms.isPending || 
+                  filteredRooms.length < numberOfRooms
+                }
                 className="bg-green-600 hover:bg-green-700 w-full"
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
-                {allocateRoom.isPending ? 'Allocating...' : 
-                 filteredRooms.length === 0 ? `No ${bookingRoomType} Available` : 
-                 'Allocate Room'}
+                {allocateRooms.isPending ? 'Allocating...' : 
+                 filteredRooms.length < numberOfRooms ? `Not enough ${bookingRoomType}s available` : 
+                 `Allocate ${numberOfRooms} Room${numberOfRooms > 1 ? 's' : ''}`}
               </Button>
             </div>
           )}
