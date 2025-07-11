@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,7 +87,10 @@ const RoomStatusView = () => {
 
   const allocateRoom = useMutation({
     mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
-      // Update booking with room and set status to confirmed
+      console.log('Allocating room:', { bookingId, roomId });
+      
+      // Start a transaction-like approach
+      // First update booking with room and set status to confirmed
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
@@ -97,17 +99,26 @@ const RoomStatusView = () => {
         })
         .eq('id', bookingId);
       
-      if (bookingError) throw bookingError;
+      if (bookingError) {
+        console.error('Error updating booking:', bookingError);
+        throw bookingError;
+      }
 
-      // Update room status to booked
+      // Then update room status to booked
       const { error: roomError } = await supabase
         .from('rooms')
         .update({ status: 'booked' as const })
         .eq('id', roomId);
       
-      if (roomError) throw roomError;
+      if (roomError) {
+        console.error('Error updating room status:', roomError);
+        throw roomError;
+      }
+
+      console.log('Room allocation completed successfully');
     },
     onSuccess: () => {
+      console.log('Room allocated successfully, refreshing queries');
       queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       queryClient.invalidateQueries({ queryKey: ['room-overview'] });
@@ -117,11 +128,21 @@ const RoomStatusView = () => {
         title: "Room Allocated",
         description: "Room has been successfully allocated to the guest.",
       });
+    },
+    onError: (error) => {
+      console.error('Error allocating room:', error);
+      toast({
+        title: "Allocation Failed",
+        description: "Failed to allocate room. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 
   const checkOutGuest = useMutation({
     mutationFn: async (bookingId: string) => {
+      console.log('Checking out guest:', bookingId);
+      
       // Get booking details first
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -129,7 +150,10 @@ const RoomStatusView = () => {
         .eq('id', bookingId)
         .single();
       
-      if (bookingError) throw bookingError;
+      if (bookingError) {
+        console.error('Error fetching booking:', bookingError);
+        throw bookingError;
+      }
 
       // Update booking status to completed
       const { error: updateBookingError } = await supabase
@@ -137,7 +161,10 @@ const RoomStatusView = () => {
         .update({ booking_status: 'completed' as const })
         .eq('id', bookingId);
       
-      if (updateBookingError) throw updateBookingError;
+      if (updateBookingError) {
+        console.error('Error updating booking status:', updateBookingError);
+        throw updateBookingError;
+      }
 
       // Update room status back to available
       if (booking.room_id) {
@@ -146,10 +173,16 @@ const RoomStatusView = () => {
           .update({ status: 'available' as const })
           .eq('id', booking.room_id);
         
-        if (roomError) throw roomError;
+        if (roomError) {
+          console.error('Error updating room status to available:', roomError);
+          throw roomError;
+        }
       }
+
+      console.log('Guest checked out successfully');
     },
     onSuccess: () => {
+      console.log('Guest checked out successfully, refreshing queries');
       queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       queryClient.invalidateQueries({ queryKey: ['room-overview'] });
@@ -157,6 +190,14 @@ const RoomStatusView = () => {
       toast({
         title: "Guest Checked Out",
         description: "Guest has been checked out and room is now available.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error checking out guest:', error);
+      toast({
+        title: "Check Out Failed",
+        description: "Failed to check out guest. Please try again.",
+        variant: "destructive",
       });
     }
   });

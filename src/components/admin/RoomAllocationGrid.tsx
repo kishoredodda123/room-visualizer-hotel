@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +28,7 @@ interface Room {
 const RoomAllocationGrid = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: rooms = [], isLoading } = useQuery({
@@ -79,13 +79,17 @@ const RoomAllocationGrid = () => {
       
       const { data, error } = await supabase
         .from('rooms')
-        .update({ status: status as any })
+        .update({ status: status as 'available' | 'prebooked' | 'booked' | 'maintenance' })
         .eq('id', roomId)
-        .select();
+        .select('*');
       
-      console.log('Update result:', { data, error });
+      console.log('Room status update result:', { data, error });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Room status update error:', error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: (data) => {
@@ -93,8 +97,10 @@ const RoomAllocationGrid = () => {
       queryClient.invalidateQueries({ queryKey: ['room-grid-allocation'] });
       queryClient.invalidateQueries({ queryKey: ['room-overview'] });
       queryClient.invalidateQueries({ queryKey: ['room-status-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       setSelectedRoom(null);
       setNewStatus('');
+      setIsDialogOpen(false);
       toast({
         title: "Room Status Updated",
         description: "Room status has been successfully updated.",
@@ -159,6 +165,32 @@ const RoomAllocationGrid = () => {
     return activeBooking?.guest_name || null;
   };
 
+  const handleRoomClick = (room: Room) => {
+    console.log('Room clicked:', room);
+    setSelectedRoom(room);
+    setNewStatus('');
+    setIsDialogOpen(true);
+  };
+
+  const handleStatusUpdate = () => {
+    if (!selectedRoom || !newStatus) {
+      console.log('Missing room or status:', { selectedRoom, newStatus });
+      return;
+    }
+    
+    console.log('Updating room status:', { 
+      roomId: selectedRoom.id, 
+      roomNumber: selectedRoom.room_number,
+      currentStatus: selectedRoom.status,
+      newStatus 
+    });
+    
+    updateRoomStatus.mutate({ 
+      roomId: selectedRoom.id, 
+      status: newStatus 
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="text-center">
@@ -208,86 +240,84 @@ const RoomAllocationGrid = () => {
               {typeRooms.map((room) => {
                 const currentGuest = getCurrentGuest(room);
                 return (
-                  <Dialog key={room.id}>
-                    <DialogTrigger asChild>
-                      <div
-                        className={`
-                          relative aspect-square rounded-lg flex items-center justify-center text-sm font-semibold cursor-pointer
-                          transition-all duration-200 transform hover:scale-105 hover:shadow-lg group
-                          ${getStatusColor(room.status)}
-                        `}
-                        title={`Room ${room.room_number} - ${getStatusText(room.status)}${
-                          currentGuest ? ` (${currentGuest})` : ''
-                        }`}
-                        onClick={() => setSelectedRoom(room)}
-                      >
-                        <span className="text-center leading-tight">{room.room_number}</span>
-                        {currentGuest && (
-                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                            <span className="text-xs">👤</span>
-                          </div>
-                        )}
-                        
-                        {/* Tooltip on hover */}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                          Room {room.room_number}<br/>
-                          Status: {getStatusText(room.status)}<br/>
-                          {currentGuest && `Guest: ${currentGuest}`}
-                        </div>
+                  <div
+                    key={room.id}
+                    className={`
+                      relative aspect-square rounded-lg flex items-center justify-center text-sm font-semibold cursor-pointer
+                      transition-all duration-200 transform hover:scale-105 hover:shadow-lg group
+                      ${getStatusColor(room.status)}
+                    `}
+                    title={`Room ${room.room_number} - ${getStatusText(room.status)}${
+                      currentGuest ? ` (${currentGuest})` : ''
+                    }`}
+                    onClick={() => handleRoomClick(room)}
+                  >
+                    <span className="text-center leading-tight">{room.room_number}</span>
+                    {currentGuest && (
+                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <span className="text-xs">👤</span>
                       </div>
-                    </DialogTrigger>
+                    )}
                     
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Room {room.room_number}</DialogTitle>
-                      </DialogHeader>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Room Type: {room.room_types.name}</p>
-                          <p className="text-sm text-muted-foreground">Current Status: {getStatusText(room.status)}</p>
-                          {currentGuest && (
-                            <p className="text-sm text-muted-foreground">Current Guest: {currentGuest}</p>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Change Status:</label>
-                          <Select value={newStatus} onValueChange={setNewStatus}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select new status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="available">Available</SelectItem>
-                              <SelectItem value="booked">Booked</SelectItem>
-                              <SelectItem value="prebooked">Pre-booked</SelectItem>
-                              <SelectItem value="maintenance">Maintenance</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <Button
-                          onClick={() => {
-                            console.log('Button clicked with:', { roomId: room.id, status: newStatus });
-                            updateRoomStatus.mutate({ 
-                              roomId: room.id, 
-                              status: newStatus 
-                            });
-                          }}
-                          disabled={!newStatus || updateRoomStatus.isPending}
-                          className="w-full"
-                        >
-                          {updateRoomStatus.isPending ? 'Updating...' : 'Update Status'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                      Room {room.room_number}<br/>
+                      Status: {getStatusText(room.status)}<br/>
+                      {currentGuest && `Guest: ${currentGuest}`}
+                    </div>
+                  </div>
                 );
               })}
             </div>
           </CardContent>
         </Card>
       ))}
+
+      {/* Room Status Update Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Edit Room {selectedRoom?.room_number}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedRoom && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Room Type: {selectedRoom.room_types.name}</p>
+                <p className="text-sm text-muted-foreground">Current Status: {getStatusText(selectedRoom.status)}</p>
+                {getCurrentGuest(selectedRoom) && (
+                  <p className="text-sm text-muted-foreground">Current Guest: {getCurrentGuest(selectedRoom)}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Change Status:</label>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="booked">Booked</SelectItem>
+                    <SelectItem value="prebooked">Pre-booked</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button
+                onClick={handleStatusUpdate}
+                disabled={!newStatus || updateRoomStatus.isPending}
+                className="w-full"
+              >
+                {updateRoomStatus.isPending ? 'Updating...' : 'Update Status'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
