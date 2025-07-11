@@ -99,10 +99,8 @@ const RoomStatusView = () => {
     }
   });
 
-  // Get room type for a specific booking
+  // Get room type for a specific booking based on total amount
   const getBookingRoomType = (booking: Booking) => {
-    // Get room type from total amount - this is a simple way to determine room type
-    // You might want to store room_type_id in bookings table for better tracking
     if (booking.total_amount <= 1500) {
       return 'Non A/C Room';
     } else {
@@ -151,7 +149,7 @@ const RoomStatusView = () => {
         console.error('Error updating room status:', roomError);
         throw roomError;
       }
-      console.log('Room status updated:', roomData);
+      console.log('Room status updated to booked:', roomData);
 
       return { booking: bookingData, room: roomData };
     },

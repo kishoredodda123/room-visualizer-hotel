@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -254,9 +255,7 @@ const RoomAllocationGrid = () => {
                   >
                     <span className="text-center leading-tight">{room.room_number}</span>
                     {currentGuest && (
-                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <span className="text-xs">👤</span>
-                      </div>
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
                     )}
                     
                     {/* Tooltip on hover */}
