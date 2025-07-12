@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,7 +73,7 @@ const RoomStatusView = () => {
       console.log('Fetched bookings:', data);
       return data.map(booking => ({
         ...booking,
-        number_of_rooms: 1 // Default to 1 if not specified
+        number_of_rooms: booking.number_of_rooms || 1 // Default to 1 if not specified
       })) as Booking[];
     }
   });
@@ -172,7 +173,8 @@ const RoomStatusView = () => {
 
         if (originalBooking.error) throw originalBooking.error;
 
-        const numberOfRooms = originalBooking.data.number_of_rooms || 1;
+        // Use default value of 1 if number_of_rooms doesn't exist
+        const numberOfRooms = 1; // Since this comes from database, it won't have number_of_rooms
         const { data: additionalBooking, error: additionalError } = await supabase
           .from('bookings')
           .insert({
