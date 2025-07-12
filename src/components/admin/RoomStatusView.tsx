@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +23,7 @@ interface Booking {
   payment_confirmed: boolean;
   confirmation_code: string;
   created_at: string;
-  number_of_rooms?: number; // Make this optional since it's not in the database
+  number_of_rooms?: number; // Make this optional since it's calculated
   rooms: {
     room_number: string;
     room_types: {
@@ -71,10 +70,8 @@ const RoomStatusView = () => {
         throw error;
       }
       console.log('Fetched bookings:', data);
-      return data.map(booking => ({
-        ...booking,
-        number_of_rooms: booking.number_of_rooms || 1 // Default to 1 if not specified
-      })) as Booking[];
+      // Don't try to access number_of_rooms from database data - it doesn't exist
+      return data as Booking[];
     }
   });
 
@@ -173,8 +170,8 @@ const RoomStatusView = () => {
 
         if (originalBooking.error) throw originalBooking.error;
 
-        // Use default value of 1 if number_of_rooms doesn't exist
-        const numberOfRooms = 1; // Since this comes from database, it won't have number_of_rooms
+        // Use default value of 1 since database doesn't have number_of_rooms
+        const numberOfRooms = 1;
         const { data: additionalBooking, error: additionalError } = await supabase
           .from('bookings')
           .insert({
