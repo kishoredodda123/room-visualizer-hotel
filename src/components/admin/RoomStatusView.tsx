@@ -304,8 +304,15 @@ const RoomStatusView = () => {
   const getBookingsByCategory = () => {
     const now = new Date();
     
-    // Group bookings by confirmation code for multiple room bookings
-    const groupedBookings = bookings.reduce((acc, booking) => {
+    // For new bookings, we keep them separate to show individual allocation fields
+    const newBookings = bookings.filter(booking => 
+      booking.booking_status === 'pending'
+    );
+
+    // For active and past bookings, group by confirmation code
+    const groupedBookings = bookings.filter(booking => 
+      booking.booking_status !== 'pending'
+    ).reduce((acc, booking) => {
       const key = booking.confirmation_code;
       if (!acc[key]) {
         acc[key] = [];
@@ -326,11 +333,6 @@ const RoomStatusView = () => {
         total_amount: totalAmount
       };
     });
-
-    // New bookings: pending status (waiting for room allocation)
-    const newBookings = processedBookings.filter(booking => 
-      booking.booking_status === 'pending'
-    );
 
     // Active bookings: confirmed status with rooms allocated and not yet past checkout
     const activeBookings = processedBookings.filter(booking => {
