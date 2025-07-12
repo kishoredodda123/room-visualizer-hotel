@@ -23,7 +23,8 @@ interface Booking {
   payment_confirmed: boolean;
   confirmation_code: string;
   created_at: string;
-  number_of_rooms: number; // Now this exists in the database
+  number_of_rooms: number;
+  room_type: string | null;
   rooms: {
     room_number: string;
     room_types: {
@@ -99,8 +100,14 @@ const RoomStatusView = () => {
     }
   });
 
-  // Get room type for a specific booking based on total amount
+  // Get room type for a specific booking - use room_type from database if available
   const getBookingRoomType = (booking: Booking) => {
+    // First, try to use the room_type stored in the booking
+    if (booking.room_type) {
+      return booking.room_type;
+    }
+    
+    // Fallback to price-based calculation for older bookings
     const numberOfRooms = booking.number_of_rooms;
     const pricePerRoom = booking.total_amount / numberOfRooms;
     
@@ -183,7 +190,8 @@ const RoomStatusView = () => {
             total_amount: originalBooking.data.total_amount / numberOfRooms,
             booking_status: 'confirmed' as const,
             payment_confirmed: true,
-            number_of_rooms: 1
+            number_of_rooms: 1,
+            room_type: originalBooking.data.room_type
           })
           .select('*');
 

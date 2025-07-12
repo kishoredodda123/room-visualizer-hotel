@@ -80,7 +80,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Create booking with number_of_rooms in the database
+      // Create booking with number_of_rooms and room_type in the database
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
@@ -94,7 +94,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
           total_amount: actualPrice * numberOfRooms,
           booking_status: 'pending' as const,
           payment_confirmed: true,
-          number_of_rooms: numberOfRooms
+          number_of_rooms: numberOfRooms,
+          room_type: roomType
         })
         .select('*')
         .single();
