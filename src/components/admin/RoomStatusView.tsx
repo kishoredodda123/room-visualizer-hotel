@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +23,7 @@ interface Booking {
   payment_confirmed: boolean;
   confirmation_code: string;
   created_at: string;
-  number_of_rooms: number;
+  number_of_rooms?: number; // Make this optional since it's not in the database
   rooms: {
     room_number: string;
     room_types: {
@@ -71,7 +70,10 @@ const RoomStatusView = () => {
         throw error;
       }
       console.log('Fetched bookings:', data);
-      return data as Booking[];
+      return data.map(booking => ({
+        ...booking,
+        number_of_rooms: 1 // Default to 1 if not specified
+      })) as Booking[];
     }
   });
 
@@ -102,7 +104,8 @@ const RoomStatusView = () => {
 
   // Get room type for a specific booking based on total amount
   const getBookingRoomType = (booking: Booking) => {
-    const pricePerRoom = booking.total_amount / (booking.number_of_rooms || 1);
+    const numberOfRooms = booking.number_of_rooms || 1;
+    const pricePerRoom = booking.total_amount / numberOfRooms;
     
     if (pricePerRoom <= 1500) {
       return 'Non A/C Room';
@@ -169,6 +172,7 @@ const RoomStatusView = () => {
 
         if (originalBooking.error) throw originalBooking.error;
 
+        const numberOfRooms = originalBooking.data.number_of_rooms || 1;
         const { data: additionalBooking, error: additionalError } = await supabase
           .from('bookings')
           .insert({
@@ -179,10 +183,9 @@ const RoomStatusView = () => {
             check_in_date: originalBooking.data.check_in_date,
             check_out_date: originalBooking.data.check_out_date,
             special_requests: originalBooking.data.special_requests,
-            total_amount: originalBooking.data.total_amount / (originalBooking.data.number_of_rooms || 1),
+            total_amount: originalBooking.data.total_amount / numberOfRooms,
             booking_status: 'confirmed' as const,
-            payment_confirmed: true,
-            number_of_rooms: 1
+            payment_confirmed: true
           })
           .select('*');
 
