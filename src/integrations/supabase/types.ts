@@ -25,6 +25,7 @@ export type Database = {
           guest_name: string
           guest_phone: string
           id: string
+          number_of_rooms: number
           payment_confirmed: boolean
           qr_data: string | null
           room_id: string | null
@@ -42,6 +43,7 @@ export type Database = {
           guest_name: string
           guest_phone: string
           id?: string
+          number_of_rooms?: number
           payment_confirmed?: boolean
           qr_data?: string | null
           room_id?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           guest_name?: string
           guest_phone?: string
           id?: string
+          number_of_rooms?: number
           payment_confirmed?: boolean
           qr_data?: string | null
           room_id?: string | null

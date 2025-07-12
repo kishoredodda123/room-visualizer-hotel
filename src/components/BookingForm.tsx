@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Create single booking with total amount and number of rooms
+      // Create booking with number_of_rooms in the database
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({

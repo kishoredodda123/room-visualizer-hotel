@@ -23,7 +23,7 @@ interface Booking {
   payment_confirmed: boolean;
   confirmation_code: string;
   created_at: string;
-  number_of_rooms?: number; // Make this optional since it's calculated
+  number_of_rooms: number; // Now this exists in the database
   rooms: {
     room_number: string;
     room_types: {
@@ -70,7 +70,6 @@ const RoomStatusView = () => {
         throw error;
       }
       console.log('Fetched bookings:', data);
-      // Don't try to access number_of_rooms from database data - it doesn't exist
       return data as Booking[];
     }
   });
@@ -102,7 +101,7 @@ const RoomStatusView = () => {
 
   // Get room type for a specific booking based on total amount
   const getBookingRoomType = (booking: Booking) => {
-    const numberOfRooms = booking.number_of_rooms || 1;
+    const numberOfRooms = booking.number_of_rooms;
     const pricePerRoom = booking.total_amount / numberOfRooms;
     
     if (pricePerRoom <= 1500) {
@@ -170,8 +169,7 @@ const RoomStatusView = () => {
 
         if (originalBooking.error) throw originalBooking.error;
 
-        // Use default value of 1 since database doesn't have number_of_rooms
-        const numberOfRooms = 1;
+        const numberOfRooms = originalBooking.data.number_of_rooms;
         const { data: additionalBooking, error: additionalError } = await supabase
           .from('bookings')
           .insert({
@@ -184,7 +182,8 @@ const RoomStatusView = () => {
             special_requests: originalBooking.data.special_requests,
             total_amount: originalBooking.data.total_amount / numberOfRooms,
             booking_status: 'confirmed' as const,
-            payment_confirmed: true
+            payment_confirmed: true,
+            number_of_rooms: 1
           })
           .select('*');
 
@@ -357,7 +356,7 @@ const RoomStatusView = () => {
   const renderBookingCard = (booking: Booking, showAllocateButton = false, showCheckOutButton = false) => {
     const filteredRooms = showAllocateButton ? getFilteredRoomsForBooking(booking) : [];
     const bookingRoomType = getBookingRoomType(booking);
-    const numberOfRooms = booking.number_of_rooms || 1;
+    const numberOfRooms = booking.number_of_rooms;
     const selectedRoomsForBooking = selectedRooms[booking.id] || [];
     
     return (
