@@ -29,6 +29,7 @@ export type Database = {
           payment_confirmed: boolean
           qr_data: string | null
           room_id: string | null
+          room_ids: string[] | null
           room_type: string | null
           special_requests: string | null
           total_amount: number
@@ -48,6 +49,7 @@ export type Database = {
           payment_confirmed?: boolean
           qr_data?: string | null
           room_id?: string | null
+          room_ids?: string[] | null
           room_type?: string | null
           special_requests?: string | null
           total_amount: number
@@ -67,6 +69,7 @@ export type Database = {
           payment_confirmed?: boolean
           qr_data?: string | null
           room_id?: string | null
+          room_ids?: string[] | null
           room_type?: string | null
           special_requests?: string | null
           total_amount?: number

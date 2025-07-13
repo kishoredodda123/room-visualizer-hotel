@@ -134,87 +134,34 @@ const RoomStatusView = () => {
     mutationFn: async ({ bookingId, roomIds }: { bookingId: string; roomIds: string[] }) => {
       console.log('Starting room allocation:', { bookingId, roomIds });
       
-      const results = [];
+      // Update the booking with all room IDs and confirm the booking
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .update({ 
+          room_id: roomIds[0], // Keep the first room in room_id for backward compatibility
+          room_ids: roomIds, // Store all room IDs in the new array field
+          booking_status: 'confirmed' as const 
+        })
+        .eq('id', bookingId)
+        .select('*');
       
-      // Allocate first room to the main booking
-      if (roomIds.length > 0) {
-        const { data: bookingData, error: bookingError } = await supabase
-          .from('bookings')
-          .update({ 
-            room_id: roomIds[0],
-            booking_status: 'confirmed' as const 
-          })
-          .eq('id', bookingId)
-          .select('*');
-        
-        if (bookingError) {
-          console.error('Error updating booking:', bookingError);
-          throw bookingError;
-        }
-
-        // Update room status to booked
-        const { error: roomError } = await supabase
-          .from('rooms')
-          .update({ status: 'booked' as const })
-          .eq('id', roomIds[0]);
-        
-        if (roomError) {
-          console.error('Error updating room status:', roomError);
-          throw roomError;
-        }
-
-        results.push(bookingData);
+      if (bookingError) {
+        console.error('Error updating booking:', bookingError);
+        throw bookingError;
       }
 
-      // Create additional bookings for remaining rooms
-      for (let i = 1; i < roomIds.length; i++) {
-        const originalBooking = await supabase
-          .from('bookings')
-          .select('*')
-          .eq('id', bookingId)
-          .single();
-
-        if (originalBooking.error) throw originalBooking.error;
-
-        const numberOfRooms = originalBooking.data.number_of_rooms;
-        const { data: additionalBooking, error: additionalError } = await supabase
-          .from('bookings')
-          .insert({
-            room_id: roomIds[i],
-            guest_name: originalBooking.data.guest_name,
-            guest_email: originalBooking.data.guest_email,
-            guest_phone: originalBooking.data.guest_phone,
-            check_in_date: originalBooking.data.check_in_date,
-            check_out_date: originalBooking.data.check_out_date,
-            special_requests: originalBooking.data.special_requests,
-            total_amount: originalBooking.data.total_amount / numberOfRooms,
-            booking_status: 'confirmed' as const,
-            payment_confirmed: true,
-            number_of_rooms: 1,
-            room_type: originalBooking.data.room_type
-          })
-          .select('*');
-
-        if (additionalError) {
-          console.error('Error creating additional booking:', additionalError);
-          throw additionalError;
-        }
-
-        // Update room status to booked
-        const { error: roomError } = await supabase
-          .from('rooms')
-          .update({ status: 'booked' as const })
-          .eq('id', roomIds[i]);
-        
-        if (roomError) {
-          console.error('Error updating room status:', roomError);
-          throw roomError;
-        }
-
-        results.push(additionalBooking);
+      // Update all room statuses to booked
+      const { error: roomError } = await supabase
+        .from('rooms')
+        .update({ status: 'booked' as const })
+        .in('id', roomIds);
+      
+      if (roomError) {
+        console.error('Error updating room status:', roomError);
+        throw roomError;
       }
 
-      return results;
+      return bookingData;
     },
     onSuccess: (data) => {
       console.log('Room allocation completed successfully:', data);
@@ -245,7 +192,7 @@ const RoomStatusView = () => {
       // Get booking details first
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
-        .select('room_id')
+        .select('room_id, room_ids')
         .eq('id', bookingId)
         .single();
       
@@ -265,12 +212,16 @@ const RoomStatusView = () => {
         throw updateBookingError;
       }
 
-      // Update room status back to available
-      if (booking.room_id) {
+      // Update room statuses back to available
+      const roomIdsToUpdate = booking.room_ids && booking.room_ids.length > 0 
+        ? booking.room_ids 
+        : (booking.room_id ? [booking.room_id] : []);
+
+      if (roomIdsToUpdate.length > 0) {
         const { error: roomError } = await supabase
           .from('rooms')
           .update({ status: 'available' as const })
-          .eq('id', booking.room_id);
+          .in('id', roomIdsToUpdate);
         
         if (roomError) {
           console.error('Error updating room status to available:', roomError);
