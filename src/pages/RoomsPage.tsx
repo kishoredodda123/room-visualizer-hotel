@@ -99,7 +99,7 @@ const RoomsPage = () => {
                       <CardTitle className="text-3xl text-hotel-brown font-bold">{room.name}</CardTitle>
                       <div className="text-right">
                         <div className="text-3xl font-bold text-hotel-gold">₹{room.price}</div>
-                        <div className="text-sm text-muted-foreground">per night</div>
+                        <div className="text-sm text-muted-foreground">per day</div>
                       </div>
                     </div>
                   </CardHeader>

@@ -164,7 +164,7 @@ const RoomDetailsPage = () => {
                       <span className="text-7xl font-bold text-hotel-gold tracking-tight">{roomTypeData.price}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xl text-muted-foreground">per night</span>
+                      <span className="text-xl text-muted-foreground">per day</span>
                       <span className="text-sm text-muted-foreground/80">Including taxes & fees</span>
                     </div>
                     <Button 

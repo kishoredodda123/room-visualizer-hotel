@@ -7,34 +7,50 @@ const Gallery = () => {
   const images = [
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421823/3P6A8455_nrvsuj.jpg',
       title: 'Luxury Suite'
     },
     {
       id: 2,
-      url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421823/3P6A8479_fnynsf.jpg',
       title: 'Executive Room'
     },
     {
       id: 3,
-      url: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      title: 'Lobby Area'
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421823/3P6A8457_yx0jwq.jpg',
+      title: ''
     },
     {
       id: 4,
-      url: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421835/3P6A8456_oxh9kh.jpg',
       title: 'Business Center'
     },
     {
       id: 5,
-      url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421823/3P6A8460_typlf1.jpg',
       title: 'Hotel Exterior'
     },
     {
       id: 6,
-      url: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421825/3P6A8465_opsbak.jpg',
+      title: 'Garden View'
+    },
+    {
+      id: 7,
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752422100/photo_6314499762719671047_y_yukzen.jpg',
+      title: 'Garden View'
+    },
+    {
+      id: 8,
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421828/3P6A8467_flppjl.jpg',
+      title: 'Garden View'
+    },
+    {
+      id: 9,
+      url: 'https://res.cloudinary.com/dsz4sifhj/image/upload/v1752421823/3P6A8457_yx0jwq.jpg',
       title: 'Garden View'
     }
+
   ];
 
   return (
@@ -54,6 +70,7 @@ const Gallery = () => {
             <img 
               src={image.url} 
               alt={image.title}
+              loading="lazy"
               className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -75,6 +92,7 @@ const Gallery = () => {
             <img 
               src={selectedImage} 
               alt="Gallery Image"
+              loading="lazy"
               className="max-w-full max-h-full object-contain"
             />
             <button 

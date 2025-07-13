@@ -72,7 +72,7 @@ const RoomTypes = () => {
                 <CardTitle className="text-2xl text-hotel-brown">{room.title}</CardTitle>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-hotel-gold">${room.price}</div>
-                  <div className="text-sm text-muted-foreground">per night</div>
+                  <div className="text-sm text-muted-foreground">per day</div>
                 </div>
               </div>
             </CardHeader>
