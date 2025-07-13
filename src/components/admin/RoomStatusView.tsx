@@ -370,19 +370,26 @@ const RoomStatusView = () => {
               >
                 {booking.booking_status.toUpperCase()}
               </Badge>
-              {(booking.allocated_rooms && booking.allocated_rooms.length > 0) ? (
-                <div className="flex flex-wrap gap-1">
-                  {booking.allocated_rooms.map((room, index) => (
-                    <Badge key={index} variant="outline" className="text-blue-600 border-blue-600">
-                      Room {room.room_number}
-                    </Badge>
-                  ))}
+              <div className="flex flex-col items-end gap-1">
+                <div className="text-sm text-muted-foreground">
+                  {booking.number_of_rooms} {booking.number_of_rooms === 1 ? 'Room' : 'Rooms'}
                 </div>
-              ) : booking.rooms?.room_number && (
-                <Badge variant="outline" className="text-blue-600 border-blue-600">
-                  Room {booking.rooms.room_number}
-                </Badge>
-              )}
+                {(booking.allocated_rooms && booking.allocated_rooms.length > 0) ? (
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {booking.allocated_rooms.map((room, index) => (
+                      <Badge key={index} variant="outline" className="text-blue-600 border-blue-600">
+                        Room {room.room_number}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : booking.rooms?.room_number && (
+                  <div className="flex justify-end">
+                    <Badge variant="outline" className="text-blue-600 border-blue-600">
+                      Room {booking.rooms.room_number}
+                    </Badge>
+                  </div>
+                )}
+              </div>
               <Badge variant="outline" className="text-green-600 border-green-600">
                 {bookingRoomType}
               </Badge>
