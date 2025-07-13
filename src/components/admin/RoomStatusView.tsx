@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 interface Booking {
   id: string;
   room_id: string | null;
+  room_ids: string[] | null;
   guest_name: string;
   guest_email: string;
   guest_phone: string;
@@ -31,6 +32,12 @@ interface Booking {
       name: string;
     };
   } | null;
+  allocated_rooms?: Array<{
+    room_number: string;
+    room_types: {
+      name: string;
+    };
+  }>;
 }
 
 interface Room {
@@ -70,8 +77,34 @@ const RoomStatusView = () => {
         console.error('Error fetching bookings:', error);
         throw error;
       }
-      console.log('Fetched bookings:', data);
-      return data as Booking[];
+      
+      // For each booking, fetch allocated rooms if room_ids exist
+      const bookingsWithRooms = await Promise.all(
+        data.map(async (booking) => {
+          if (booking.room_ids && booking.room_ids.length > 0) {
+            const { data: allocatedRooms, error: roomsError } = await supabase
+              .from('rooms')
+              .select(`
+                room_number,
+                room_types (
+                  name
+                )
+              `)
+              .in('id', booking.room_ids);
+            
+            if (!roomsError && allocatedRooms) {
+              return {
+                ...booking,
+                allocated_rooms: allocatedRooms
+              };
+            }
+          }
+          return booking;
+        })
+      );
+      
+      console.log('Fetched bookings:', bookingsWithRooms);
+      return bookingsWithRooms as Booking[];
     }
   });
 
@@ -337,7 +370,15 @@ const RoomStatusView = () => {
               >
                 {booking.booking_status.toUpperCase()}
               </Badge>
-              {booking.rooms?.room_number && (
+              {(booking.allocated_rooms && booking.allocated_rooms.length > 0) ? (
+                <div className="flex flex-wrap gap-1">
+                  {booking.allocated_rooms.map((room, index) => (
+                    <Badge key={index} variant="outline" className="text-blue-600 border-blue-600">
+                      Room {room.room_number}
+                    </Badge>
+                  ))}
+                </div>
+              ) : booking.rooms?.room_number && (
                 <Badge variant="outline" className="text-blue-600 border-blue-600">
                   Room {booking.rooms.room_number}
                 </Badge>
