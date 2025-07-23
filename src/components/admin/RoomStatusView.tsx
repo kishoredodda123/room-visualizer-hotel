@@ -51,16 +51,28 @@ interface Room {
   };
 }
 
-const RoomStatusView = () => {
+interface DateFilter {
+  type: 'single' | 'range';
+  date?: Date;
+  from?: Date;
+  to?: Date;
+}
+
+interface RoomStatusViewProps {
+  dateFilter: DateFilter;
+}
+
+const RoomStatusView = ({ dateFilter }: RoomStatusViewProps) => {
   const [activeTab, setActiveTab] = useState('new');
-  const [selectedRooms, setSelectedRooms] = useState<{[key: string]: string[]}>({});
+  const [selectedRooms, setSelectedRooms] = useState<{ [key: string]: string[] }>({});
   const queryClient = useQueryClient();
 
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['room-status-bookings'],
+    queryKey: ['room-status-bookings', dateFilter],
     queryFn: async () => {
-      console.log('Fetching bookings...');
-      const { data, error } = await supabase
+      console.log('Fetching bookings with date filter:', dateFilter);
+
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -70,14 +82,36 @@ const RoomStatusView = () => {
               name
             )
           )
-        `)
-        .order('created_at', { ascending: false });
-      
+        `);
+
+      // Apply date filtering based on check-in and check-out dates
+      if (dateFilter.type === 'single' && dateFilter.date) {
+        const selectedDate = dateFilter.date.toISOString().split('T')[0];
+        // Show bookings where the selected date falls within the stay period
+        query = query
+          .lte('check_in_date', selectedDate)
+          .gte('check_out_date', selectedDate);
+      } else if (dateFilter.type === 'range' && dateFilter.from) {
+        const fromDate = dateFilter.from.toISOString().split('T')[0];
+        if (dateFilter.to) {
+          const toDate = dateFilter.to.toISOString().split('T')[0];
+          // Show bookings that overlap with the selected date range
+          query = query
+            .lte('check_in_date', toDate)
+            .gte('check_out_date', fromDate);
+        } else {
+          // Show bookings from the start date onwards
+          query = query.gte('check_out_date', fromDate);
+        }
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
       if (error) {
         console.error('Error fetching bookings:', error);
         throw error;
       }
-      
+
       // For each booking, fetch allocated rooms if room_ids exist
       const bookingsWithRooms = await Promise.all(
         data.map(async (booking) => {
@@ -91,7 +125,7 @@ const RoomStatusView = () => {
                 )
               `)
               .in('id', booking.room_ids);
-            
+
             if (!roomsError && allocatedRooms) {
               return {
                 ...booking,
@@ -102,7 +136,7 @@ const RoomStatusView = () => {
           return booking;
         })
       );
-      
+
       console.log('Fetched bookings:', bookingsWithRooms);
       return bookingsWithRooms as Booking[];
     }
@@ -123,7 +157,7 @@ const RoomStatusView = () => {
         `)
         .eq('status', 'available')
         .order('room_number');
-      
+
       if (error) {
         console.error('Error fetching available rooms:', error);
         throw error;
@@ -139,15 +173,15 @@ const RoomStatusView = () => {
     if (booking.room_type) {
       return booking.room_type;
     }
-    
+
     // Fallback to price-based calculation for older bookings
     const numberOfRooms = booking.number_of_rooms;
     const pricePerRoom = booking.total_amount / numberOfRooms;
-    
+
     if (pricePerRoom <= 1500) {
       return 'Non A/C Room';
     } else if (pricePerRoom <= 3000) {
-      return 'A/C Room';  
+      return 'A/C Room';
     } else {
       return 'Suite Room';
     }
@@ -157,7 +191,7 @@ const RoomStatusView = () => {
   const getFilteredRoomsForBooking = (booking: Booking) => {
     const bookingRoomType = getBookingRoomType(booking);
     console.log('Filtering rooms for booking room type:', bookingRoomType);
-    
+
     const filtered = availableRooms.filter(room => room.room_types.name === bookingRoomType);
     console.log('Filtered rooms:', filtered);
     return filtered;
@@ -166,18 +200,18 @@ const RoomStatusView = () => {
   const allocateRooms = useMutation({
     mutationFn: async ({ bookingId, roomIds }: { bookingId: string; roomIds: string[] }) => {
       console.log('Starting room allocation:', { bookingId, roomIds });
-      
+
       // Update the booking with all room IDs and confirm the booking
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
-        .update({ 
+        .update({
           room_id: roomIds[0], // Keep the first room in room_id for backward compatibility
           room_ids: roomIds, // Store all room IDs in the new array field
-          booking_status: 'confirmed' as const 
+          booking_status: 'confirmed' as const
         })
         .eq('id', bookingId)
         .select('*');
-      
+
       if (bookingError) {
         console.error('Error updating booking:', bookingError);
         throw bookingError;
@@ -188,7 +222,7 @@ const RoomStatusView = () => {
         .from('rooms')
         .update({ status: 'booked' as const })
         .in('id', roomIds);
-      
+
       if (roomError) {
         console.error('Error updating room status:', roomError);
         throw roomError;
@@ -221,14 +255,14 @@ const RoomStatusView = () => {
   const checkOutGuest = useMutation({
     mutationFn: async (bookingId: string) => {
       console.log('Checking out guest:', bookingId);
-      
+
       // Get booking details first
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('room_id, room_ids')
         .eq('id', bookingId)
         .single();
-      
+
       if (bookingError) {
         console.error('Error fetching booking:', bookingError);
         throw bookingError;
@@ -239,15 +273,15 @@ const RoomStatusView = () => {
         .from('bookings')
         .update({ booking_status: 'completed' as const })
         .eq('id', bookingId);
-      
+
       if (updateBookingError) {
         console.error('Error updating booking status:', updateBookingError);
         throw updateBookingError;
       }
 
       // Update room statuses back to available
-      const roomIdsToUpdate = booking.room_ids && booking.room_ids.length > 0 
-        ? booking.room_ids 
+      const roomIdsToUpdate = booking.room_ids && booking.room_ids.length > 0
+        ? booking.room_ids
         : (booking.room_id ? [booking.room_id] : []);
 
       if (roomIdsToUpdate.length > 0) {
@@ -255,7 +289,7 @@ const RoomStatusView = () => {
           .from('rooms')
           .update({ status: 'available' as const })
           .in('id', roomIdsToUpdate);
-        
+
         if (roomError) {
           console.error('Error updating room status to available:', roomError);
           throw roomError;
@@ -287,14 +321,14 @@ const RoomStatusView = () => {
 
   const getBookingsByCategory = () => {
     const now = new Date();
-    
+
     // For new bookings, we keep them separate to show individual allocation fields
-    const newBookings = bookings.filter(booking => 
+    const newBookings = bookings.filter(booking =>
       booking.booking_status === 'pending'
     );
 
     // For active and past bookings, group by confirmation code
-    const groupedBookings = bookings.filter(booking => 
+    const groupedBookings = bookings.filter(booking =>
       booking.booking_status !== 'pending'
     ).reduce((acc, booking) => {
       const key = booking.confirmation_code;
@@ -310,7 +344,7 @@ const RoomStatusView = () => {
       const mainBooking = group[0];
       const totalRooms = group.length;
       const totalAmount = group.reduce((sum, b) => sum + b.total_amount, 0);
-      
+
       return {
         ...mainBooking,
         number_of_rooms: totalRooms,
@@ -321,16 +355,16 @@ const RoomStatusView = () => {
     // Active bookings: confirmed status with rooms allocated and not yet past checkout
     const activeBookings = processedBookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
-      return booking.booking_status === 'confirmed' && 
-             booking.room_id && 
-             checkOut >= now;
+      return booking.booking_status === 'confirmed' &&
+        booking.room_id &&
+        checkOut >= now;
     });
 
     // Past bookings: completed status or past checkout date
     const pastBookings = processedBookings.filter(booking => {
       const checkOut = new Date(booking.check_out_date);
-      return booking.booking_status === 'completed' || 
-             (booking.booking_status === 'confirmed' && checkOut < now);
+      return booking.booking_status === 'completed' ||
+        (booking.booking_status === 'confirmed' && checkOut < now);
     });
 
     return { newBookings, activeBookings, pastBookings };
@@ -352,7 +386,7 @@ const RoomStatusView = () => {
     const bookingRoomType = getBookingRoomType(booking);
     const numberOfRooms = booking.number_of_rooms;
     const selectedRoomsForBooking = selectedRooms[booking.id] || [];
-    
+
     return (
       <Card key={booking.id} className="mb-4 border-hotel-gold/20">
         <CardHeader className="pb-3">
@@ -362,10 +396,10 @@ const RoomStatusView = () => {
               <p className="text-sm text-muted-foreground font-mono">{booking.confirmation_code}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Badge 
+              <Badge
                 variant={
                   booking.booking_status === 'confirmed' ? 'default' :
-                  booking.booking_status === 'pending' ? 'secondary' : 'outline'
+                    booking.booking_status === 'pending' ? 'secondary' : 'outline'
                 }
               >
                 {booking.booking_status.toUpperCase()}
@@ -426,7 +460,7 @@ const RoomStatusView = () => {
               </div>
             </div>
           </div>
-          
+
           {booking.special_requests && (
             <div className="mb-4 p-3 bg-muted rounded-lg">
               <p className="text-sm"><strong>Special Requests:</strong> {booking.special_requests}</p>
@@ -438,12 +472,12 @@ const RoomStatusView = () => {
               <div className="text-sm text-muted-foreground">
                 Available {bookingRoomType} rooms ({filteredRooms.length}) - Allocate {numberOfRooms} room{numberOfRooms > 1 ? 's' : ''}:
               </div>
-              
+
               {Array.from({ length: numberOfRooms }, (_, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <span className="text-sm font-medium w-16">Room {index + 1}:</span>
-                  <Select 
-                    value={selectedRoomsForBooking[index] || ''} 
+                  <Select
+                    value={selectedRoomsForBooking[index] || ''}
                     onValueChange={(value) => handleRoomSelection(booking.id, value, index)}
                   >
                     <SelectTrigger className="flex-1">
@@ -453,31 +487,31 @@ const RoomStatusView = () => {
                       {filteredRooms
                         .filter(room => !selectedRoomsForBooking.includes(room.id) || selectedRoomsForBooking[index] === room.id)
                         .map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          Room {room.room_number} - {room.room_types.name}
-                        </SelectItem>
-                      ))}
+                          <SelectItem key={room.id} value={room.id}>
+                            Room {room.room_number} - {room.room_types.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
               ))}
-              
+
               <Button
-                onClick={() => allocateRooms.mutate({ 
-                  bookingId: booking.id, 
+                onClick={() => allocateRooms.mutate({
+                  bookingId: booking.id,
                   roomIds: selectedRoomsForBooking.filter(Boolean)
                 })}
                 disabled={
-                  selectedRoomsForBooking.filter(Boolean).length !== numberOfRooms || 
-                  allocateRooms.isPending || 
+                  selectedRoomsForBooking.filter(Boolean).length !== numberOfRooms ||
+                  allocateRooms.isPending ||
                   filteredRooms.length < numberOfRooms
                 }
                 className="bg-green-600 hover:bg-green-700 w-full"
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
-                {allocateRooms.isPending ? 'Allocating...' : 
-                 filteredRooms.length < numberOfRooms ? `Not enough ${bookingRoomType}s available` : 
-                 `Allocate ${numberOfRooms} Room${numberOfRooms > 1 ? 's' : ''}`}
+                {allocateRooms.isPending ? 'Allocating...' :
+                  filteredRooms.length < numberOfRooms ? `Not enough ${bookingRoomType}s available` :
+                    `Allocate ${numberOfRooms} Room${numberOfRooms > 1 ? 's' : ''}`}
               </Button>
             </div>
           )}
@@ -507,8 +541,21 @@ const RoomStatusView = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-hotel-brown">Booking Status Management</h2>
-      
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h2 className="text-2xl font-semibold text-hotel-brown">Booking Status Management</h2>
+        <div className="text-sm text-muted-foreground">
+          {dateFilter.type === 'single' && dateFilter.date && (
+            <span>Showing bookings for: {dateFilter.date.toLocaleDateString()}</span>
+          )}
+          {dateFilter.type === 'range' && dateFilter.from && (
+            <span>
+              Showing bookings for: {dateFilter.from.toLocaleDateString()}
+              {dateFilter.to && ` - ${dateFilter.to.toLocaleDateString()}`}
+            </span>
+          )}
+        </div>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="new" className="flex items-center gap-2">

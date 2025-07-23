@@ -20,10 +20,10 @@ interface BookingFormProps {
   onClose: () => void;
 }
 
-const BookingForm: React.FC<BookingFormProps> = ({ 
+const BookingForm: React.FC<BookingFormProps> = ({
   roomType = 'Room',
   roomPrice = 0,
-  onClose 
+  onClose
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -47,7 +47,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         .select('*')
         .eq('name', roomType)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -56,13 +56,43 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
   const actualPrice = roomTypeData?.price || roomPrice;
 
+  // Phone number validation function
+  const isValidPhoneNumber = (phone: string): boolean => {
+    // Remove all non-digit characters to count digits
+    const digitsOnly = phone.replace(/\D/g, '');
+
+    // Must be exactly 10 digits
+    if (digitsOnly.length !== 10) {
+      return false;
+    }
+
+    // First digit must be 6, 7, 8, or 9 (cannot start with 5 or less)
+    const firstDigit = parseInt(digitsOnly[0]);
+    if (firstDigit < 6) {
+      return false;
+    }
+
+    // Additional check: must be a valid Indian mobile number pattern
+    return /^[6-9]\d{9}$/.test(digitsOnly);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.phone || !formData.checkIn || !formData.checkOut) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone number format
+    if (!isValidPhoneNumber(formData.phone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Phone number must be exactly 10 digits and start with 6, 7, 8, or 9.",
         variant: "destructive",
       });
       return;
@@ -123,12 +153,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
       setBookingDetails(confirmationData);
       setShowConfirmation(true);
-      
+
       toast({
         title: "Booking Confirmed! 🎉",
         description: `Your reservation for ${numberOfRooms} room(s) has been confirmed. Rooms will be allocated by admin.`,
       });
-      
+
     } catch (error) {
       console.error('Booking submission error:', error);
       toast({
@@ -164,7 +194,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             ×
           </Button>
         </CardHeader>
-        
+
         <CardContent className="p-6">
           <div className="mb-6 p-6 bg-gradient-to-r from-hotel-gold-light/50 to-hotel-gold-light/20 rounded-xl border border-hotel-gold/20">
             <h3 className="font-bold text-hotel-brown mb-3 text-lg">Booking Summary</h3>
@@ -211,30 +241,30 @@ const BookingForm: React.FC<BookingFormProps> = ({
               </div>
             </div>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Full Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter your full name"
                   required
                   className="mt-1"
                   disabled={isSubmitting}
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter your email"
                   required
                   className="mt-1"
@@ -242,21 +272,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="phone">Phone Number *</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="Enter your phone number"
+                onChange={(e) => {
+                  // Allow only numbers for strict validation
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setFormData({ ...formData, phone: value });
+                }}
+                placeholder="Enter 10-digit mobile number"
                 required
                 className="mt-1"
                 disabled={isSubmitting}
+                maxLength={10}
               />
+              {formData.phone && !isValidPhoneNumber(formData.phone) && (
+                <p className="text-sm text-red-500 mt-1">
+                  Phone number must be exactly 10 digits and start with 6, 7, 8, or 9
+                </p>
+              )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Check-in Date *</Label>
@@ -278,7 +318,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     <Calendar
                       mode="single"
                       selected={formData.checkIn}
-                      onSelect={(date) => setFormData({...formData, checkIn: date})}
+                      onSelect={(date) => setFormData({ ...formData, checkIn: date })}
                       disabled={(date) => date < new Date()}
                       initialFocus
                       className="pointer-events-auto"
@@ -286,7 +326,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div>
                 <Label>Check-out Date *</Label>
                 <Popover>
@@ -307,7 +347,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                     <Calendar
                       mode="single"
                       selected={formData.checkOut}
-                      onSelect={(date) => setFormData({...formData, checkOut: date})}
+                      onSelect={(date) => setFormData({ ...formData, checkOut: date })}
                       disabled={(date) => date < (formData.checkIn || new Date())}
                       initialFocus
                       className="pointer-events-auto"
@@ -316,31 +356,31 @@ const BookingForm: React.FC<BookingFormProps> = ({
                 </Popover>
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="requests">Special Requests</Label>
               <Textarea
                 id="requests"
                 value={formData.specialRequests}
-                onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
                 placeholder="Any special requests or preferences..."
                 rows={3}
                 className="mt-1"
                 disabled={isSubmitting}
               />
             </div>
-            
+
             <div className="flex space-x-4 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onClose}
                 className="flex-1 py-3"
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-black font-semibold py-3 transition-all duration-300 hover:shadow-lg"
                 disabled={isSubmitting}

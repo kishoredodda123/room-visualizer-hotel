@@ -115,10 +115,13 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-hotel-brown-light/20 mt-8 pt-8 text-center">
+        <div className="border-t border-hotel-brown-light/20 mt-8 pt-8 text-center relative">
           <p className="text-hotel-brown-light">
             © 2025 MVR Residency, Ambedkar Nagar, Tadepalligudem, Andhra Pradesh 534101. All rights reserved.
           </p>
+          <div className="absolute bottom-0 right-0 text-[6px] text-hotel-brown-light/30 opacity-20 select-none pointer-events-none">
+            D.N.Kishore
+          </div>
         </div>
       </div>
     </footer>
